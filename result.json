@@ -1,0 +1,101 @@
+{
+    {
+        "stage1":
+            "q0"
+                "method": {
+                    "multimodal": [id1, id2, id3];
+                    "OCR": [id4 , id5, id6];
+                    "ensemble": [id4 , id5, id6];
+                }
+            "q1":
+                "method": {
+                    "multimodal": [id1, id2, id3];
+                    "OCR": [id4 , id5, id6];
+                    "ensemble": [id4 , id5, id6];
+                }
+            "q2" :
+                "method": {
+                    "multimodal": [id1, id2, id3];
+                    "OCR": [id4 , id5, id6];
+                    "ensemble": [id4 , id5, id6];
+                }
+            "ensemble_query":
+                "method": {
+                    "multimodal": [id1, id2, id3];
+                    "OCR": [id4 , id5, id6];
+                    "ensemble_kep": [id4 , id5, id6];
+                }
+    }
+    {
+        "stage2":
+            "q0"
+                "method": {
+                    "multimodal": [id1, id2, id3];
+                    "OCR": [id4 , id5, id6];
+                    "ensemble": [id4 , id5, id6];
+                }
+            "q1":
+                "method": {
+                    "multimodal": [id1, id2, id3];
+                    "OCR": [id4 , id5, id6];
+                    "ensemble": [id4 , id5, id6];
+                }
+            "q2" :
+                "method": {
+                    "multimodal": [id1, id2, id3];
+                    "OCR": [id4 , id5, id6];
+                    "ensemble": [id4 , id5, id6];
+                }
+            "ensemble_query":
+                "method": {
+                    "multimodal": [id1, id2, id3];
+                    "OCR": [id4 , id5, id6];
+                    "ensemble_kep": [id4 , id5, id6];
+                }
+    }
+
+    {
+        "stage3":
+            "q0"
+                "method": {
+                    "multimodal": [id1, id2, id3];
+                    "OCR": [id4 , id5, id6];
+                    "ensemble": [id4 , id5, id6];
+                }
+            "q1":
+                "method": {
+                    "multimodal": [id1, id2, id3];
+                    "OCR": [id4 , id5, id6];
+                    "ensemble": [id4 , id5, id6];
+                }
+            "q2" :
+                "method": {
+                    "multimodal": [id1, id2, id3];
+                    "OCR": [id4 , id5, id6];
+                    "ensemble": [id4 , id5, id6];
+                }
+            "ensemble_query":
+                "method": {
+                    "multimodal": [id1, id2, id3];
+                    "OCR": [id4 , id5, id6];
+                    "ensemble_kep": [id4 , id5, id6];
+                }
+    }
+}
+
+
+
+
+temporal result:
+list id 1 [(1, 0.5) 2 3 4]
+list id 2 [5 6 3 4]
+list id 3 [7 8 3 4]
+
+
+id từ list1 < id từ list2  < id từ list3 và chung video
+
+
+list chuhng [(1, 0.5), 2]
+
+list id 1 [11 2 3 4 ]
+list id need to search [20 ]
