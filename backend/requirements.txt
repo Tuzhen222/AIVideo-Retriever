@@ -1,4 +1,0 @@
-
-
-faiss = load("clip.bin")
-faiss.search(

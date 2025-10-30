@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.build/
+.eggs/
+.python-version
+.venv/
+venv/
+env/
+ENV/
+.venv*/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+*.egg-info/
+.dist-info/
+
+# Node / Frontend
+node_modules/
+.next/
+.nuxt/
+.turbo/
+.pnpm-store/
+.yarn/
+.parcel-cache/
+.vite/
+coverage/
+dist/
+build/
+
+# Environment & secrets
+.env
+.env.*
+*.env
+*.env.*
+
+# OS / Editor / Misc
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+# Docker / Compose
+**/docker/volumes/
+**/tmp/
+
+# Keep uv.lock tracked (do NOT ignore)
+!uv.lock
