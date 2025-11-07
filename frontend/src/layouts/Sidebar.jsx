@@ -141,7 +141,7 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
       {/* Mobile toggle button - chỉ hiện trên mobile */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden fixed top-16 left-0 z-50 bg-red-500 text-white p-2 rounded-r-lg shadow-lg"
+        className="md:hidden fixed top-6 left-0 z-50 bg-red-500 text-white p-2 rounded-r-lg shadow-lg"
         aria-label="Toggle sidebar"
       >
         {isOpen ? '◀' : '▶'}
@@ -152,10 +152,10 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
         className={`
           bg-white border-r border-gray-200
           transition-all duration-300 ease-in-out
-          h-full overflow-y-auto
+          overflow-y-auto
           w-52
-          md:relative md:block
-          ${isOpen ? 'fixed inset-y-0 left-0 top-0 z-40 block' : 'hidden md:block'}
+          fixed top-6 bottom-0 left-0 z-40
+          ${isOpen ? 'block' : 'hidden md:block'}
         `}
       >
         <div className="p-3 space-y-3">
@@ -176,7 +176,7 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
             const isOtherToggleEnabled = section.toggles.multimodal || section.toggles.ic || section.toggles.ocr || section.toggles.genImage
 
              return (
-               <div key={section.id} className="flex flex-col gap-2 border-2 border-gray-300 rounded-lg bg-gray-50 shadow-sm p-3 relative">
+               <div key={section.id} className="flex flex-col gap-1.5 border-2 border-gray-300 rounded-lg bg-gray-50 shadow-sm p-2 relative">
                  {/* Remove button */}
                  {querySections.length > 1 && (
                    <button
@@ -190,17 +190,18 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
                    </button>
                  )}
                  {/* Query input div */}
-                <div className="min-h-[80px]">
+                <div className="h-[50px]">
                   <textarea
                     value={section.query}
                     onChange={(e) => updateQuerySection(section.id, { query: e.target.value })}
                     placeholder="Query"
-                    className="w-full h-full min-h-[80px] p-2 bg-white border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    className="w-full h-full p-1.5 bg-white border border-gray-300 rounded text-xs resize-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    rows={2}
                   />
                 </div>
 
                 {/* Object selection div */}
-                <div className="h-12 relative flex-shrink-0">
+                <div className="h-8 relative flex-shrink-0">
                   <ObjectSelector
                     selectedObjects={section.selectedObjects}
                     onSelectionChange={(objects) => updateQuerySection(section.id, { selectedObjects: objects })}
@@ -209,7 +210,7 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
                 </div>
 
                 {/* Toggle buttons div - 6 buttons in 2x3 grid */}
-                <div className="grid grid-cols-3 grid-rows-2 gap-2 items-center justify-items-center flex-shrink-0">
+                <div className="grid grid-cols-3 grid-rows-2 gap-1 items-center justify-items-center flex-shrink-0">
                   <ToggleButton
                     label="Multimodal"
                     isOn={section.toggles.multimodal}

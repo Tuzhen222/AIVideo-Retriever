@@ -84,7 +84,7 @@ function ObjectSelector({ selectedObjects, onSelectionChange, disabled = false }
       {/* Input field */}
       <div
         onClick={handleInputClick}
-        className={`w-full h-full p-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600 flex items-center ${
+        className={`w-full h-full p-1 bg-white border border-gray-300 rounded text-xs text-gray-600 flex items-center ${
           disabled ? 'cursor-not-allowed opacity-50 bg-gray-100' : 'cursor-text'
         } ${
           isOpen ? 'ring-2 ring-red-500 border-transparent' : ''

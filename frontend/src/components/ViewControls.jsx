@@ -1,15 +1,17 @@
 import React, { useState } from 'react'
 
-function ViewControls() {
-  const [viewMode, setViewMode] = useState('E') // E: Ensemble, A: Augment, M: Method
-  const [numValue, setNumValue] = useState('')
+function ViewControls({ viewMode, onViewModeChange }) {
+  const [numValue, setNumValue] = useState('10')
   const [toggleState, setToggleState] = useState(false)
 
   const handleViewModeClick = () => {
     // Chuyển đổi giữa E -> A -> M -> E
     const modes = ['E', 'A', 'M']
-    const currentIndex = modes.indexOf(viewMode)
-    setViewMode(modes[(currentIndex + 1) % modes.length])
+    const currentIndex = modes.indexOf(viewMode || 'E')
+    const newMode = modes[(currentIndex + 1) % modes.length]
+    if (onViewModeChange) {
+      onViewModeChange(newMode)
+    }
   }
 
   return (
@@ -17,10 +19,10 @@ function ViewControls() {
       {/* Nút tròn đổi mode E/A/M */}
       <button
         onClick={handleViewModeClick}
-        className="w-6 h-6 rounded-full bg-white hover:bg-gray-100 border border-gray-300 flex items-center justify-center text-xs font-medium text-gray-800 transition-colors shadow-sm"
+        className="w-6 h-6 rounded-full bg-white hover:bg-gray-200 active:bg-gray-300 border border-gray-300 flex items-center justify-center text-xs font-medium text-gray-800 transition-colors duration-200 shadow-sm"
         title="View Mode: E=Ensemble, A=Augment Query, M=Method"
       >
-        {viewMode}
+        {viewMode || 'E'}
       </button>
 
       {/* Input Num */}
@@ -28,8 +30,15 @@ function ViewControls() {
         <input
           type="number"
           value={numValue}
-          onChange={(e) => setNumValue(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value
+            // Chỉ cho phép số dương hoặc rỗng
+            if (value === '' || (parseInt(value) >= 0 && !isNaN(parseInt(value)))) {
+              setNumValue(value)
+            }
+          }}
           placeholder="Num"
+          min="0"
           className="w-16 px-2 py-0.5 rounded border border-gray-300 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-white"
           title="Number of Advanced Temporal Search"
         />

@@ -1,6 +1,6 @@
 import React from 'react'
 
-function StageButtons({ onStageClick, onTemporalResultClick, hasSearched, querySectionsCount }) {
+function StageButtons({ onStageClick, onTemporalResultClick, hasSearched, querySectionsCount, selectedStage, selectedTemporal }) {
   // Show Stage 1 if searched
   const showStage1 = hasSearched
   // Show additional stages based on query sections count
@@ -14,11 +14,14 @@ function StageButtons({ onStageClick, onTemporalResultClick, hasSearched, queryS
   }
 
   return (
-    <div className="md:absolute md:left-[208px]">
-      <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1">
         <button
           onClick={() => onStageClick(1)}
-          className="px-2 h-full bg-gray-300 hover:bg-gray-400 text-gray-800 rounded text-xs font-medium transition-colors flex items-center"
+          className={`px-2 h-full rounded text-xs font-medium transition-colors flex items-center ${
+            selectedStage === 1
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'bg-gray-300 hover:bg-gray-400 text-gray-800'
+          }`}
         >
           Stage 1
         </button>
@@ -26,7 +29,11 @@ function StageButtons({ onStageClick, onTemporalResultClick, hasSearched, queryS
           <button
             key={stageNum}
             onClick={() => onStageClick(stageNum)}
-            className="px-2 h-full bg-gray-300 hover:bg-gray-400 text-gray-800 rounded text-xs font-medium transition-colors flex items-center"
+            className={`px-2 h-full rounded text-xs font-medium transition-colors flex items-center ${
+              selectedStage === stageNum
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-gray-300 hover:bg-gray-400 text-gray-800'
+            }`}
           >
             Stage {stageNum}
           </button>
@@ -34,13 +41,16 @@ function StageButtons({ onStageClick, onTemporalResultClick, hasSearched, queryS
         {showTemporalResult && (
           <button
             onClick={onTemporalResultClick}
-            className="px-2 h-full bg-gray-300 hover:bg-gray-400 text-gray-800 rounded text-xs font-medium transition-colors flex items-center"
+            className={`px-2 h-full rounded text-xs font-medium transition-colors flex items-center ${
+              selectedTemporal
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-gray-300 hover:bg-gray-400 text-gray-800'
+            }`}
           >
             Temporal Result
           </button>
         )}
       </div>
-    </div>
   )
 }
 

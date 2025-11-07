@@ -2,7 +2,7 @@ import React from 'react'
 
 function MainContent({ searchResults }) {
   return (
-    <div className="flex-1 bg-white">
+    <div className="fixed top-6 left-0 md:left-52 right-0 bottom-0 bg-white overflow-y-auto">
       {searchResults ? (
         // Search results will be displayed here
         <div>

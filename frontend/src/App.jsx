@@ -7,6 +7,7 @@ function App() {
   const [hasSearched, setHasSearched] = useState(false)
   const [searchResults, setSearchResults] = useState(null)
   const [querySectionsCount, setQuerySectionsCount] = useState(1)
+  const [viewMode, setViewMode] = useState('E')
   const sidebarRef = useRef(null)
 
   const handleClear = () => {
@@ -36,27 +37,26 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-gray-50">
-      {/* Header - Red bar */}
+    <div className="h-screen w-screen overflow-hidden bg-gray-50">
+      {/* Header - Fixed at top */}
       <Header 
         onSearch={handleSearch} 
         onClear={handleClear}
         hasSearched={hasSearched}
         querySectionsCount={querySectionsCount}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
       
-      {/* Main layout with sidebar and content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <Sidebar 
-          ref={sidebarRef} 
-          hasSearched={hasSearched}
-          onQuerySectionsChange={handleQuerySectionsChange}
-        />
+      {/* Sidebar - Fixed on left */}
+      <Sidebar 
+        ref={sidebarRef} 
+        hasSearched={hasSearched}
+        onQuerySectionsChange={handleQuerySectionsChange}
+      />
         
-        {/* Main content area */}
-        <MainContent searchResults={searchResults} />
-      </div>
+      {/* Main content area - Scrollable */}
+      <MainContent searchResults={searchResults} />
     </div>
   )
 }
