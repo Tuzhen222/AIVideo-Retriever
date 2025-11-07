@@ -20,7 +20,7 @@ function ToggleButton({ label, isOn, onToggle, disabled = false }) {
           `}
         />
       </button>
-      <span className={`text-xs text-center ${disabled ? 'text-gray-400' : 'text-gray-700'}`}>{label}</span>
+      <span className={`text-xs text-center whitespace-nowrap ${disabled ? 'text-gray-400' : 'text-gray-700'}`}>{label}</span>
     </div>
   )
 }
