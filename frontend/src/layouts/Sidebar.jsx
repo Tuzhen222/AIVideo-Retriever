@@ -2,7 +2,7 @@ import React, { useState, useImperativeHandle, forwardRef } from 'react'
 import ToggleButton from '../components/ToggleButton'
 import ObjectSelector from '../components/ObjectSelector'
 
-const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange }, ref) {
+const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange, onSearch, isSearching = false }, ref) {
   const [isOpen, setIsOpen] = useState(true)
   const [backgroundInfo, setBackgroundInfo] = useState('')
   
@@ -41,7 +41,9 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
         }
       }])
     },
-    getQuerySectionsCount: () => querySections.length
+    getQuerySectionsCount: () => querySections.length,
+    getQuerySections: () => querySections,
+    getBackgroundInfo: () => backgroundInfo
   }))
 
   // Notify parent when query sections change
@@ -136,6 +138,18 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
     }
   }, [hasSearched])
 
+  // Handle Enter key press for search
+  const handleKeyDown = (e, isBackgroundInfo = false) => {
+    // Enter without Shift triggers search
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (onSearch && !isSearching) {
+        onSearch()
+      }
+    }
+    // Shift+Enter allows newline (default behavior)
+  }
+
   return (
     <>
       {/* Mobile toggle button - chỉ hiện trên mobile */}
@@ -164,6 +178,7 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
             <textarea
               value={backgroundInfo}
               onChange={(e) => setBackgroundInfo(e.target.value)}
+              onKeyDown={(e) => handleKeyDown(e, true)}
               placeholder="Background Info (Optional)"
               className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent focus:bg-white transition-colors"
               rows={3}
@@ -194,6 +209,7 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
                   <textarea
                     value={section.query}
                     onChange={(e) => updateQuerySection(section.id, { query: e.target.value })}
+                    onKeyDown={(e) => handleKeyDown(e, false)}
                     placeholder="Query"
                     className="w-full h-full p-1.5 bg-white border border-gray-300 rounded text-xs resize-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
                     rows={2}

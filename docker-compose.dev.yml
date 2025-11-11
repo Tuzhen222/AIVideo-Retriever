@@ -1,0 +1,99 @@
+# Development docker-compose with hot-reload
+# Usage: docker-compose -f docker-compose.dev.yml up
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aivideo-backend-dev
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=True
+      - RELOAD=True
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:80,http://localhost
+      - DATA_ROOT=app/data
+      - KEYFRAME_DIR=app/data/keyframe
+      - INDEX_DIR=app/data/index
+      - MAPPING_KF_PATH=app/data/index/mapping_kf.json
+      - MAPPING_SCENE_PATH=app/data/index/mapping_scene.json
+      - DEFAULT_TOP_K=10
+      - MAX_TOP_K=100
+      - DEFAULT_SEARCH_METHOD=ensemble
+      - DEVICE=cuda
+      - BATCH_SIZE=16
+      - LOG_LEVEL=INFO
+      - QDRANT_HOST=qdrant
+      - QDRANT_GRPC_PORT=6334
+    volumes:
+      # Mount code for hot-reload
+      - ./backend/app:/app/app
+      # Mount data (read-only)
+      - ./backend/app/data:/app/app/data:ro
+      # Mount logs
+      - ./backend/logs:/app/logs
+    networks:
+      - aivideo-network
+    restart: unless-stopped
+    depends_on:
+      - qdrant
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: aivideo-frontend-dev
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+      - qdrant
+    volumes:
+      # Mount source code for hot-reload
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.js:/app/vite.config.js
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend/postcss.config.js:/app/postcss.config.js
+      # Exclude node_modules
+      - /app/node_modules
+    networks:
+      - aivideo-network
+    restart: unless-stopped
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: aivideo-qdrant-dev
+    ports:
+      - "6333:6333"  # HTTP API
+      - "6334:6334"  # gRPC
+    volumes:
+      - qdrant_storage_dev:/qdrant/storage
+    networks:
+      - aivideo-network
+    restart: unless-stopped
+
+volumes:
+  qdrant_storage_dev:
+    driver: local
+
+networks:
+  aivideo-network:
+    driver: bridge
+
