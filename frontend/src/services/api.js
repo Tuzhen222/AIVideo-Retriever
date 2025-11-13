@@ -1,7 +1,10 @@
 // In production (Docker), API is proxied through nginx, so use relative URLs
 // In development, use the backend URL directly
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-  (import.meta.env.PROD ? '' : 'http://localhost:8000')
+// In dev, use relative path so Vite proxy forwards to backend container.
+// In prod, optionally honor VITE_API_BASE_URL (e.g., through nginx).
+const API_BASE_URL = import.meta.env.DEV
+  ? ''
+  : (import.meta.env.VITE_API_BASE_URL || '')
 
 /**
  * API service for backend communication
@@ -54,7 +57,7 @@ class ApiService {
    * @param {number} searchParams.top_k - Number of results
    * @param {Object} searchParams.filters - Additional filters
    */
-  async search({ query, method = 'ensemble', top_k = 10, filters = null }) {
+  async search({ query, method = 'ensemble', top_k = null, filters = null }) {
     return this.request('/api/search', {
       method: 'POST',
       body: JSON.stringify({
@@ -71,6 +74,41 @@ class ApiService {
    */
   async getSearchMethods() {
     return this.request('/api/search/methods')
+  }
+
+  /**
+   * Get search configuration (defaults, limits)
+   */
+  async getSearchConfig() {
+    return this.request('/api/search/config')
+  }
+
+  /**
+   * Get media index (YouTube links)
+   */
+  async getMediaIndex() {
+    return this.request('/api/media-index')
+  }
+
+  /**
+   * Get FPS mapping
+   */
+  async getFpsMapping() {
+    return this.request('/api/fps-mapping')
+  }
+
+  /**
+   * Get keyframe mapping (mapping_kf.json) - for OCR and Qdrant search results
+   */
+  async getMappingKf() {
+    return this.request('/api/mapping-kf')
+  }
+
+  /**
+   * Get scene mapping (mapping_scene.json) - for ASR search results
+   */
+  async getMappingScene() {
+    return this.request('/api/mapping-scene')
   }
 
   /**
@@ -97,7 +135,7 @@ class ApiService {
     return this.search({
       query: mainQuery,
       method,
-      top_k: options.top_k || 10,
+      top_k: options.top_k || null, // Let backend use DEFAULT_TOP_K
       filters,
     })
   }

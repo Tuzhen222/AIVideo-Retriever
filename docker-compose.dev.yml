@@ -12,24 +12,11 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      - HOST=0.0.0.0
-      - PORT=8000
-      - DEBUG=True
-      - RELOAD=True
-      - CORS_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:80,http://localhost
-      - DATA_ROOT=app/data
-      - KEYFRAME_DIR=app/data/keyframe
-      - INDEX_DIR=app/data/index
-      - MAPPING_KF_PATH=app/data/index/mapping_kf.json
-      - MAPPING_SCENE_PATH=app/data/index/mapping_scene.json
-      - DEFAULT_TOP_K=10
-      - MAX_TOP_K=100
-      - DEFAULT_SEARCH_METHOD=ensemble
-      - DEVICE=cuda
-      - BATCH_SIZE=16
-      - LOG_LEVEL=INFO
-      - QDRANT_HOST=qdrant
-      - QDRANT_GRPC_PORT=6334
+      # Override only Docker-specific values (service names, not localhost)
+      - QDRANT_HOST=qdrant  # Use service name in Docker network
+      - ELASTICSEARCH_HOST=elasticsearch  # Use service name in Docker network
+      - ELASTICSEARCH_PORT=9200
+      # All other values (DEFAULT_TOP_K, CLIP_WEIGHT, etc.) will be read from .env file
     volumes:
       # Mount code for hot-reload
       - ./backend/app:/app/app
@@ -41,7 +28,10 @@ services:
       - aivideo-network
     restart: unless-stopped
     depends_on:
-      - qdrant
+      qdrant:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -75,7 +65,7 @@ services:
       - aivideo-network
     restart: unless-stopped
     environment:
-      - VITE_API_BASE_URL=http://localhost:8000
+      - VITE_API_BASE_URL=http://backend:8000
 
   qdrant:
     image: qdrant/qdrant:latest
@@ -89,8 +79,59 @@ services:
       - aivideo-network
     restart: unless-stopped
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: aivideo-elasticsearch-dev
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elasticsearch_data_dev:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - aivideo-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: aivideo-kibana-dev
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_NAME=kibana
+      - SERVER_HOST=0.0.0.0
+    ports:
+      - "5601:5601"
+    networks:
+      - aivideo-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
 volumes:
   qdrant_storage_dev:
+    driver: local
+  elasticsearch_data_dev:
     driver: local
 
 networks:

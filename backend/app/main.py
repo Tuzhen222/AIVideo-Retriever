@@ -63,8 +63,7 @@ async def health_check():
 
 
 # Include routers
-from app.api import search
-
+from app.routers import search
 app.include_router(search.router, prefix="/api", tags=["search"])
 
 # Mount static files for keyframes

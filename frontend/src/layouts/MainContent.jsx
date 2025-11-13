@@ -1,8 +1,42 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import VideoModal from '../components/VideoModal'
+import api from '../services/api'
 
 function MainContent({ searchResults, isSearching = false, searchError = null }) {
+  const [selectedResult, setSelectedResult] = useState(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [mediaIndex, setMediaIndex] = useState(null)
+  const [fpsMapping, setFpsMapping] = useState(null)
+
+  // Load media index and fps mapping on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [mediaIndexData, fpsMappingData] = await Promise.all([
+          api.getMediaIndex(),
+          api.getFpsMapping(),
+        ])
+        setMediaIndex(mediaIndexData)
+        setFpsMapping(fpsMappingData)
+      } catch (error) {
+        console.error('Error loading media index or fps mapping:', error)
+      }
+    }
+    loadData()
+  }, [])
+
+  const handleImageClick = (result) => {
+    setSelectedResult(result)
+    setIsModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedResult(null)
+  }
   return (
     <div className="fixed top-6 left-0 md:left-52 right-0 bottom-0 bg-white overflow-y-auto">
+      <div className="relative w-full h-full">
       {isSearching ? (
         // Loading state
         <div className="flex items-center justify-center h-full">
@@ -27,26 +61,19 @@ function MainContent({ searchResults, isSearching = false, searchError = null })
         </div>
       ) : searchResults ? (
         // Search results
-        <div className="p-6">
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">
-              Search Results ({searchResults.total || 0})
-            </h2>
-            <p className="text-sm text-gray-600">
-              Method: <span className="font-medium">{searchResults.method || 'ensemble'}</span> | 
-              Query: <span className="font-medium">"{searchResults.query || ''}"</span>
-            </p>
-          </div>
-          
+        <div className="p-6">          
           {searchResults.results && searchResults.results.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
               {searchResults.results.map((result, index) => (
                 <div 
                   key={result.id || index} 
                   className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
                 >
                   {result.keyframe_path && (
-                    <div className="aspect-video bg-gray-100 flex items-center justify-center">
+                    <div 
+                      className="aspect-video bg-gray-100 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => handleImageClick(result)}
+                    >
                       <img 
                         src={result.keyframe_path} 
                         alt={`Result ${index + 1}`}
@@ -57,21 +84,6 @@ function MainContent({ searchResults, isSearching = false, searchError = null })
                       />
                     </div>
                   )}
-                  <div className="p-3">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-xs font-medium text-gray-600">#{index + 1}</span>
-                      {result.score !== undefined && (
-                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
-                          {(result.score * 100).toFixed(1)}%
-                        </span>
-                      )}
-                    </div>
-                    {result.metadata && Object.keys(result.metadata).length > 0 && (
-                      <div className="text-xs text-gray-500 mt-2">
-                        {JSON.stringify(result.metadata, null, 2)}
-                      </div>
-                    )}
-                  </div>
                 </div>
               ))}
             </div>
@@ -92,6 +104,16 @@ function MainContent({ searchResults, isSearching = false, searchError = null })
           </div>
         </div>
       )}
+
+      {/* Video Modal */}
+      <VideoModal
+        result={selectedResult}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        mediaIndex={mediaIndex}
+        fpsMapping={fpsMapping}
+      />
+      </div>
     </div>
   )
 }

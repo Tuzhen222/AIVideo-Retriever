@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import Header from './layouts/Header'
 import Sidebar from './layouts/Sidebar'
 import MainContent from './layouts/MainContent'
@@ -11,7 +11,23 @@ function App() {
   const [viewMode, setViewMode] = useState('E')
   const [isSearching, setIsSearching] = useState(false)
   const [searchError, setSearchError] = useState(null)
+  const [searchConfig, setSearchConfig] = useState({ default_top_k: 200 })
   const sidebarRef = useRef(null)
+
+  // Load search config and mapping files on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const config = await api.getSearchConfig()
+        console.log('Loaded search config:', config)
+        setSearchConfig(config)
+      } catch (err) {
+        console.warn('Failed to load search config, using defaults:', err)
+        // Keep default_top_k: 200 as fallback (matching backend .env)
+      }
+    }
+    loadData()
+  }, [])
 
   const handleClear = () => {
     // Reset search state
@@ -28,6 +44,7 @@ function App() {
 
   /**
    * Combine background info with query sections into a single query string
+   * For OCR: if OCR toggle is enabled, use OCR text as the query (or combine with regular query if both exist)
    */
   const combineQuery = (backgroundInfo, querySections) => {
     const parts = []
@@ -39,6 +56,11 @@ function App() {
     
     // Add all non-empty query sections
     querySections.forEach((section, index) => {
+      // If OCR is enabled, prioritize OCR text
+      if (section.toggles.ocr && section.ocrText && section.ocrText.trim() !== '') {
+        parts.push(section.ocrText.trim())
+      }
+      // Add regular query if exists (can be combined with OCR text)
       if (section.query && section.query.trim() !== '') {
         parts.push(section.query.trim())
       }
@@ -54,12 +76,38 @@ function App() {
     const querySections = sidebarRef.current.getQuerySections()
     const backgroundInfo = sidebarRef.current.getBackgroundInfo()
 
-    // Validate: at least one query section must have a query or background info
-    const hasValidQuery = querySections.some(section => section.query.trim() !== '') || 
-                         (backgroundInfo && backgroundInfo.trim() !== '')
+    // Validate: at least one query section must have a query, OCR text (if OCR is enabled), or background info
+    const hasValidQuery = querySections.some(section => {
+      const hasQuery = section.query && section.query.trim() !== ''
+      const hasOCRText = section.toggles.ocr && section.ocrText && section.ocrText.trim() !== ''
+      return hasQuery || hasOCRText
+    }) || (backgroundInfo && backgroundInfo.trim() !== '')
     if (!hasValidQuery) {
-      setSearchError('Please enter at least one query or background info')
+      setSearchError('Please enter at least one query, OCR text (if OCR is enabled), or background info')
       return
+    }
+
+    // Validate: at least one search method must be selected
+    const firstSection = querySections[0]
+    const hasSelectedMethod = firstSection.toggles.multimodal || 
+                              firstSection.toggles.ic || 
+                              firstSection.toggles.asr || 
+                              firstSection.toggles.ocr
+    if (!hasSelectedMethod) {
+      setSearchError('Please select at least one search method (Multimodal, IC, ASR, or OCR)')
+      return
+    }
+
+    let searchMethod = null
+
+    if (firstSection.toggles.asr) {
+      searchMethod = 'text' // ASR uses text search (Elasticsearch asr index)
+    } else if (firstSection.toggles.ocr) {
+      searchMethod = 'ocr' // OCR uses OCR search (Elasticsearch ocr index)
+    } else if (firstSection.toggles.multimodal) {
+      searchMethod = 'ensemble'
+    } else if (firstSection.toggles.ic) {
+      searchMethod = 'caption'
     }
 
     setIsSearching(true)
@@ -68,26 +116,11 @@ function App() {
     setQuerySectionsCount(querySections.length)
 
     try {
-      // Determine search method from toggles
-      let searchMethod = 'ensemble'
-      const firstSection = querySections[0]
-      
-      if (firstSection.toggles.asr) {
-        searchMethod = 'text' // ASR uses text search
-      } else if (firstSection.toggles.multimodal) {
-        searchMethod = 'ensemble'
-      } else if (firstSection.toggles.ic) {
-        searchMethod = 'caption'
-      } else if (firstSection.toggles.ocr) {
-        searchMethod = 'text'
-      } else if (firstSection.toggles.genImage) {
-        searchMethod = 'clip' // GenImage uses CLIP
-      }
-
       // Combine background info with query sections into a single query string
       const combinedQuery = combineQuery(backgroundInfo, querySections)
       
-      // Build search request
+      // Build search request - let backend use DEFAULT_TOP_K by sending null
+      // User can set DEFAULT_TOP_K in backend .env file if they want more results
       const searchParams = {
         queries: querySections.map(section => ({
           query: section.query,
@@ -95,7 +128,7 @@ function App() {
           selectedObjects: section.selectedObjects,
         })),
         method: searchMethod,
-        top_k: 10,
+        top_k: null, // Let backend use DEFAULT_TOP_K
         filters: {
           objectFilter: firstSection.toggles.objectFilter,
           selectedObjects: firstSection.selectedObjects,
@@ -106,7 +139,7 @@ function App() {
       const response = await api.search({
         query: combinedQuery,
         method: searchMethod,
-        top_k: 10,
+        top_k: null, // Let backend use DEFAULT_TOP_K
         filters: searchParams.filters,
       })
 

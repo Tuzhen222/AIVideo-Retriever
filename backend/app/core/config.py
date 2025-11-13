@@ -36,32 +36,25 @@ class Settings(BaseSettings):
     MAPPING_SCENE_PATH: str = "app/data/index/mapping_scene.json"
     
     # Search settings
-    DEFAULT_TOP_K: int = 10
-    MAX_TOP_K: int = 100
-    DEFAULT_SEARCH_METHOD: str = "ensemble"
+    DEFAULT_TOP_K: int = 200
     
-    # Ensemble weights (will be normalized to sum to 1.0)
-    CLIP_WEIGHT: float = 1.0
-    BEIT3_WEIGHT: float = 2.0
-    BLIP2_WEIGHT: float = 1.0
-    
-    # Score scaling method
-    SCORE_SCALE_METHOD: str = "min_max"  # min_max, z_score, percentile
-    
-    # Model settings
-    DEVICE: str = "cuda"  # cuda or cpu
-    BATCH_SIZE: int = 16
+
     
     # Embedding Server URL (for remote embedding API)
     EMBEDDING_SERVER_URL: Optional[str] = None
     
-    # Gemini API (if used)
-    GEMINI_API_KEY: Optional[str] = None
-    
     # Elasticsearch settings (if used)
     ELASTICSEARCH_HOST: Optional[str] = None
     ELASTICSEARCH_PORT: int = 9200
-    ELASTICSEARCH_INDEX: Optional[str] = None
+    ELASTICSEARCH_INDEX_PREFIX: str = "es_data"
+    ELASTICSEARCH_REQUEST_TIMEOUT: int = 60
+    ELASTICSEARCH_MAX_RETRIES: int = 3
+    ELASTICSEARCH_RETRY_ON_TIMEOUT: bool = True
+    ELASTICSEARCH_USER: Optional[str] = None
+    ELASTICSEARCH_PASSWORD: Optional[str] = None
+    ELASTICSEARCH_USE_SSL: bool = False
+    ELASTICSEARCH_VERIFY_CERTS: bool = True
+    ELASTICSEARCH_WAIT_TIMEOUT: int = 30  # Timeout in seconds for waiting Elasticsearch to be ready
     
     # Qdrant settings (gRPC only)
     QDRANT_HOST: str = "localhost"

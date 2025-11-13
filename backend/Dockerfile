@@ -26,7 +26,8 @@ RUN uv pip install --system --no-cache \
     tqdm==4.66.1 \
     "faiss-cpu>=1.7.4" \
     "requests>=2.31.0" \
-    "Pillow>=10.0.0"
+    "Pillow>=10.0.0" \
+    "elasticsearch>=8.0.0,<9.0.0"
 
 # Copy application code
 COPY app/ ./app/

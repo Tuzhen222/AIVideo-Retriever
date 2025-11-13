@@ -6,6 +6,26 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true, // Listen on all addresses
+    // Use API base from env when running in Docker, fallback to localhost
+    // e.g., VITE_API_BASE_URL=http://backend:8000
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_BASE_URL || 'http://backend:8000',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path,
+      },
+      '/health': {
+        target: process.env.VITE_API_BASE_URL || 'http://backend:8000',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/keyframes': {
+        target: process.env.VITE_API_BASE_URL || 'http://backend:8000',
+        changeOrigin: true,
+        secure: false,
+      }
+    },
     watch: {
       usePolling: true, // Required for Docker hot-reload
       interval: 1000, // Poll interval in ms
@@ -14,18 +34,6 @@ export default defineConfig({
       host: 'localhost', // HMR host
       port: 3000,
     },
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/health': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        secure: false,
-      }
-    }
   }
 })
 

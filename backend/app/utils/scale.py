@@ -40,6 +40,39 @@ def min_max_scale(scores: List[float], min_val: Optional[float] = None, max_val:
     return scaled.tolist()
 
 
+def z_score_normalize(scores: List[float], mean: Optional[float] = None, std: Optional[float] = None) -> List[float]:
+    """
+    Normalize scores using z-score (mean=0, std=1) WITHOUT mapping to [0, 1]
+    This is useful for ensemble when different methods have different score distributions
+    
+    Args:
+        scores: List of scores to normalize
+        mean: Mean value (if None, calculate from scores)
+        std: Standard deviation (if None, calculate from scores)
+        
+    Returns:
+        Normalized z-scores (can be negative, mean=0, std=1)
+    """
+    if not scores:
+        return []
+    
+    scores_array = np.array(scores, dtype=np.float32)
+    
+    if mean is None:
+        mean = np.mean(scores_array)
+    if std is None:
+        std = np.std(scores_array)
+    
+    # Handle case where std is 0
+    if std == 0:
+        return [0.0] * len(scores)
+    
+    # Z-score normalization: (x - mean) / std
+    z_scores = (scores_array - mean) / std
+    
+    return z_scores.tolist()
+
+
 def z_score_scale(scores: List[float], mean: Optional[float] = None, std: Optional[float] = None) -> List[float]:
     """
     Scale scores using z-score normalization (mean=0, std=1)

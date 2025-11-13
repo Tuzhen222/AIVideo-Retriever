@@ -79,20 +79,29 @@ function ObjectSelector({ selectedObjects, onSelectionChange, disabled = false }
     ? selectedObjects.join(', ') + (selectedObjects.length < AVAILABLE_OBJECTS.length ? ', ..' : '')
     : 'No objects selected'
 
+  // Calculate min height based on selected objects
+  const minHeight = selectedObjects.length > 0 ? 'auto' : '32px'
+  const maxHeight = '150px'
+
   return (
-    <div ref={containerRef} className="relative w-full h-full">
+    <div ref={containerRef} className="relative w-full" style={{ minHeight, maxHeight }}>
       {/* Input field */}
       <div
         onClick={handleInputClick}
-        className={`w-full h-full p-1 bg-white border border-gray-300 rounded text-xs text-gray-600 flex items-center ${
+        className={`w-full p-1 bg-white border border-gray-300 rounded text-xs text-gray-600 flex items-start ${
           disabled ? 'cursor-not-allowed opacity-50 bg-gray-100' : 'cursor-text'
         } ${
           isOpen ? 'ring-2 ring-red-500 border-transparent' : ''
         }`}
+        style={{ 
+          minHeight: '32px',
+          maxHeight: maxHeight,
+          overflowY: selectedObjects.length > 3 ? 'auto' : 'hidden'
+        }}
       >
         {selectedObjects.length > 0 && !isOpen && (
-          <div className="flex flex-wrap gap-1 flex-1 items-center">
-            {selectedObjects.slice(0, 2).map((obj) => (
+          <div className="flex flex-wrap gap-1 flex-1 items-center w-full">
+            {selectedObjects.map((obj) => (
               <span
                 key={obj}
                 className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs"
@@ -107,11 +116,6 @@ function ObjectSelector({ selectedObjects, onSelectionChange, disabled = false }
                 </button>
               </span>
             ))}
-            {selectedObjects.length > 2 && (
-              <span className="text-gray-600 text-xs">
-                +{selectedObjects.length - 2} more
-              </span>
-            )}
           </div>
         )}
         {selectedObjects.length === 0 && !isOpen && (
