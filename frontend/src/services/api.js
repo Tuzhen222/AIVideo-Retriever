@@ -117,28 +117,16 @@ class ApiService {
    * @param {Object} options - Search options
    */
   async searchMultiple(queries, options = {}) {
-    // For now, combine queries or use first query
-    // This can be extended based on backend API
-    const mainQuery = queries.length > 0 ? queries[0].query : ''
-    const method = queries[0]?.method || options.method || 'ensemble'
-    
-    // Build filters from query sections
-    const filters = {
-      queries: queries.map(q => ({
-        query: q.query,
-        toggles: q.toggles,
-        selectedObjects: q.selectedObjects,
-      })),
-      ...options,
-    }
-
+    const mainQuery = queries[0]?.query || "";
+    const method = options.method || "ensemble";  
+  
     return this.search({
       query: mainQuery,
       method,
-      top_k: options.top_k || null, // Let backend use DEFAULT_TOP_K
-      filters,
-    })
-  }
+      top_k: options.top_k || null,
+      filters: options.filters || null,
+    });
+  }  
 }
 
 // Export singleton instance

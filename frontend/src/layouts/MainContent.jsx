@@ -2,38 +2,7 @@ import React, { useState, useEffect } from 'react'
 import VideoModal from '../components/VideoModal'
 import api from '../services/api'
 
-function MainContent({ searchResults, isSearching = false, searchError = null }) {
-  const [selectedResult, setSelectedResult] = useState(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [mediaIndex, setMediaIndex] = useState(null)
-  const [fpsMapping, setFpsMapping] = useState(null)
-
-  // Load media index and fps mapping on mount
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [mediaIndexData, fpsMappingData] = await Promise.all([
-          api.getMediaIndex(),
-          api.getFpsMapping(),
-        ])
-        setMediaIndex(mediaIndexData)
-        setFpsMapping(fpsMappingData)
-      } catch (error) {
-        console.error('Error loading media index or fps mapping:', error)
-      }
-    }
-    loadData()
-  }, [])
-
-  const handleImageClick = (result) => {
-    setSelectedResult(result)
-    setIsModalOpen(true)
-  }
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false)
-    setSelectedResult(null)
-  }
+function MainContent({ searchResults, isSearching = false, searchError = null, onImageClick = null, selectedResult = null, isModalOpen = false, onCloseModal = null, mediaIndex = null, fpsMapping = null }) {
   return (
     <div className="fixed top-6 left-0 md:left-52 right-0 bottom-0 bg-white overflow-y-auto">
       <div className="relative w-full h-full">
@@ -71,8 +40,8 @@ function MainContent({ searchResults, isSearching = false, searchError = null })
                 >
                   {result.keyframe_path && (
                     <div 
-                      className="aspect-video bg-gray-100 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={() => handleImageClick(result)}
+                  className="aspect-video bg-gray-100 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => onImageClick && onImageClick(result)}
                     >
                       <img 
                         src={result.keyframe_path} 
@@ -109,7 +78,7 @@ function MainContent({ searchResults, isSearching = false, searchError = null })
       <VideoModal
         result={selectedResult}
         isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        onClose={onCloseModal}
         mediaIndex={mediaIndex}
         fpsMapping={fpsMapping}
       />

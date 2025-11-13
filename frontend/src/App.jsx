@@ -12,62 +12,86 @@ function App() {
   const [isSearching, setIsSearching] = useState(false)
   const [searchError, setSearchError] = useState(null)
   const [searchConfig, setSearchConfig] = useState({ default_top_k: 200 })
+  const [selectedResult, setSelectedResult] = useState(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [mediaIndex, setMediaIndex] = useState(null)
+  const [fpsMapping, setFpsMapping] = useState(null)
   const sidebarRef = useRef(null)
 
-  // Load search config and mapping files on mount
+  // Load search config on mount
   useEffect(() => {
     const loadData = async () => {
       try {
         const config = await api.getSearchConfig()
-        console.log('Loaded search config:', config)
         setSearchConfig(config)
       } catch (err) {
-        console.warn('Failed to load search config, using defaults:', err)
-        // Keep default_top_k: 200 as fallback (matching backend .env)
+        console.warn('Failed to load search config (fallback to default 200)')
       }
     }
     loadData()
   }, [])
 
+  // Load media index and fps mapping on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [mediaIndexData, fpsMappingData] = await Promise.all([
+          api.getMediaIndex(),
+          api.getFpsMapping(),
+        ])
+        setMediaIndex(mediaIndexData)
+        setFpsMapping(fpsMappingData)
+      } catch (error) {
+        console.error('Error loading media index or fps mapping:', error)
+      }
+    }
+    loadData()
+  }, [])
+
+  const handleImageClick = (result) => {
+    setSelectedResult(result)
+    setIsModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedResult(null)
+  }
+
   const handleClear = () => {
-    // Reset search state
     setHasSearched(false)
-    // Clear search results
     setSearchResults(null)
     setSearchError(null)
-    // Reset sidebar (query, objects, toggles)
     if (sidebarRef.current) {
       sidebarRef.current.reset()
       setQuerySectionsCount(1)
     }
   }
 
-  /**
-   * Combine background info with query sections into a single query string
-   * For OCR: if OCR toggle is enabled, use OCR text as the query (or combine with regular query if both exist)
-   */
+  // Utility: avoid undefined toggle cases
+  const safeToggle = (toggles, key) => {
+    if (!toggles) return false
+    if (toggles[key] !== undefined) return toggles[key]
+    return false
+  }
+
+  // Build final combined query
   const combineQuery = (backgroundInfo, querySections) => {
     const parts = []
-    
-    // Add background info if exists
-    if (backgroundInfo && backgroundInfo.trim() !== '') {
+    if (backgroundInfo && backgroundInfo.trim() !== "") {
       parts.push(backgroundInfo.trim())
     }
-    
-    // Add all non-empty query sections
-    querySections.forEach((section, index) => {
-      // If OCR is enabled, prioritize OCR text
-      if (section.toggles.ocr && section.ocrText && section.ocrText.trim() !== '') {
+
+    querySections.forEach(section => {
+      if (safeToggle(section.toggles, "ocr") && section.ocrText?.trim() !== "") {
         parts.push(section.ocrText.trim())
       }
-      // Add regular query if exists (can be combined with OCR text)
-      if (section.query && section.query.trim() !== '') {
+      if (section.query?.trim() !== "") {
         parts.push(section.query.trim())
       }
     })
-    
-    // Join with space
-    return parts.join(' ')
+
+    return parts.join(" ").trim()
   }
 
   const handleSearch = async () => {
@@ -76,38 +100,48 @@ function App() {
     const querySections = sidebarRef.current.getQuerySections()
     const backgroundInfo = sidebarRef.current.getBackgroundInfo()
 
-    // Validate: at least one query section must have a query, OCR text (if OCR is enabled), or background info
-    const hasValidQuery = querySections.some(section => {
-      const hasQuery = section.query && section.query.trim() !== ''
-      const hasOCRText = section.toggles.ocr && section.ocrText && section.ocrText.trim() !== ''
-      return hasQuery || hasOCRText
-    }) || (backgroundInfo && backgroundInfo.trim() !== '')
+    /** 1) Validate: at least one query exists */
+    const hasValidQuery =
+      querySections.some(section => {
+        const hasQuery = section.query && section.query.trim() !== ""
+        const hasOCR = safeToggle(section.toggles, "ocr") && section.ocrText?.trim() !== ""
+        return hasQuery || hasOCR
+      }) ||
+      (backgroundInfo && backgroundInfo.trim() !== "")
+
     if (!hasValidQuery) {
-      setSearchError('Please enter at least one query, OCR text (if OCR is enabled), or background info')
+      setSearchError("Please enter at least one query, OCR text (if OCR enabled), or background info")
       return
     }
 
-    // Validate: at least one search method must be selected
+    /** 2) Validate selected method */
     const firstSection = querySections[0]
-    const hasSelectedMethod = firstSection.toggles.multimodal || 
-                              firstSection.toggles.ic || 
-                              firstSection.toggles.asr || 
-                              firstSection.toggles.ocr
+    const t = firstSection.toggles || {}
+
+    const hasSelectedMethod =
+      safeToggle(t, "multimodal") ||
+      safeToggle(t, "multiModal") ||      // support camelCase
+      safeToggle(t, "ic") ||
+      safeToggle(t, "caption") ||
+      safeToggle(t, "asr") ||
+      safeToggle(t, "ocr")
+
     if (!hasSelectedMethod) {
-      setSearchError('Please select at least one search method (Multimodal, IC, ASR, or OCR)')
+      setSearchError("Please select at least one search method (Multimodal, IC, ASR, or OCR)")
       return
     }
 
+    /** 3) Determine final search method */
     let searchMethod = null
 
-    if (firstSection.toggles.asr) {
-      searchMethod = 'text' // ASR uses text search (Elasticsearch asr index)
-    } else if (firstSection.toggles.ocr) {
-      searchMethod = 'ocr' // OCR uses OCR search (Elasticsearch ocr index)
-    } else if (firstSection.toggles.multimodal) {
-      searchMethod = 'ensemble'
-    } else if (firstSection.toggles.ic) {
-      searchMethod = 'caption'
+    if (safeToggle(t, "ic") || safeToggle(t, "caption")) {
+      searchMethod = "caption"
+    } else if (safeToggle(t, "asr")) {
+      searchMethod = "text"
+    } else if (safeToggle(t, "ocr")) {
+      searchMethod = "ocr"
+    } else if (safeToggle(t, "multimodal") || safeToggle(t, "multiModal")) {
+      searchMethod = "ensemble"
     }
 
     setIsSearching(true)
@@ -116,52 +150,43 @@ function App() {
     setQuerySectionsCount(querySections.length)
 
     try {
-      // Combine background info with query sections into a single query string
       const combinedQuery = combineQuery(backgroundInfo, querySections)
-      
-      // Build search request - let backend use DEFAULT_TOP_K by sending null
-      // User can set DEFAULT_TOP_K in backend .env file if they want more results
+
       const searchParams = {
-        queries: querySections.map(section => ({
-          query: section.query,
-          toggles: section.toggles,
-          selectedObjects: section.selectedObjects,
+        queries: querySections.map(sec => ({
+          query: sec.query,
+          toggles: sec.toggles,
+          selectedObjects: sec.selectedObjects
         })),
         method: searchMethod,
-        top_k: null, // Let backend use DEFAULT_TOP_K
+        top_k: null,
         filters: {
-          objectFilter: firstSection.toggles.objectFilter,
-          selectedObjects: firstSection.selectedObjects,
+          objectFilter: safeToggle(firstSection.toggles, "objectFilter"),
+          selectedObjects: firstSection.selectedObjects || []
         }
       }
 
-      // Use combined query (background info + all query sections)
       const response = await api.search({
         query: combinedQuery,
         method: searchMethod,
-        top_k: null, // Let backend use DEFAULT_TOP_K
-        filters: searchParams.filters,
+        top_k: null,
+        filters: searchParams.filters
       })
 
       setSearchResults(response)
-    } catch (error) {
-      console.error('Search error:', error)
-      setSearchError(error.message || 'Search failed. Please try again.')
+    } catch (err) {
+      console.error("Search error:", err)
+      setSearchError(err.message || "Search failed. Please try again.")
       setSearchResults(null)
     } finally {
       setIsSearching(false)
     }
   }
 
-  const handleQuerySectionsChange = (count) => {
-    setQuerySectionsCount(count)
-  }
-
   return (
     <div className="h-screen w-screen overflow-hidden bg-gray-50">
-      {/* Header - Fixed at top */}
-      <Header 
-        onSearch={handleSearch} 
+      <Header
+        onSearch={handleSearch}
         onClear={handleClear}
         hasSearched={hasSearched}
         querySectionsCount={querySectionsCount}
@@ -169,25 +194,29 @@ function App() {
         onViewModeChange={setViewMode}
         isSearching={isSearching}
       />
-      
-      {/* Sidebar - Fixed on left */}
-      <Sidebar 
-        ref={sidebarRef} 
+
+      <Sidebar
+        ref={sidebarRef}
         hasSearched={hasSearched}
-        onQuerySectionsChange={handleQuerySectionsChange}
+        onQuerySectionsChange={setQuerySectionsCount}
         onSearch={handleSearch}
         isSearching={isSearching}
       />
-        
-      {/* Main content area - Scrollable */}
-      <MainContent 
-        searchResults={searchResults} 
-        isSearching={isSearching}
-        searchError={searchError}
-      />
+      <div className="relative flex-1 overflow-hidden">
+        <MainContent
+          searchResults={searchResults}
+          isSearching={isSearching}
+          searchError={searchError}
+          onImageClick={handleImageClick}
+          selectedResult={selectedResult}
+          isModalOpen={isModalOpen}
+          onCloseModal={handleCloseModal}
+          mediaIndex={mediaIndex}
+          fpsMapping={fpsMapping}
+        />
+      </div>
     </div>
   )
 }
 
 export default App
-

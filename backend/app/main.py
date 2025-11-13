@@ -8,12 +8,12 @@ import os
 
 from app.core.config import settings
 from app.logger.logger import setup_logging, app_logger
+import uvicorn
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events"""
-    # Startup
     setup_logging()
     app_logger.info("🚀 Starting FastAPI application...")
     app_logger.info(f"Log directory: logs/")
@@ -23,7 +23,6 @@ async def lifespan(app: FastAPI):
     app_logger.info("🛑 Shutting down FastAPI application...")
 
 
-# Create FastAPI app
 app = FastAPI(
     title=settings.API_TITLE,
     description="API for video retrieval and search",
@@ -31,7 +30,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -41,7 +39,6 @@ app.add_middleware(
 )
 
 
-# Health check endpoint
 @app.get("/")
 async def root():
     """Root endpoint"""
@@ -62,15 +59,12 @@ async def health_check():
     }
 
 
-# Include routers
 from app.routers import search
 app.include_router(search.router, prefix="/api", tags=["search"])
 
-# Mount static files for keyframes
-# Serve keyframes at /keyframes/... path
+
 keyframe_dir = settings.KEYFRAME_DIR
 if not os.path.isabs(keyframe_dir):
-    # Make path absolute relative to app directory
     app_dir = os.path.dirname(os.path.dirname(__file__))
     keyframe_dir = os.path.join(app_dir, keyframe_dir)
 
@@ -82,7 +76,6 @@ else:
 
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(
         "app.main:app",
         host=settings.HOST,

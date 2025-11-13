@@ -38,10 +38,10 @@ class Settings(BaseSettings):
     # Search settings
     DEFAULT_TOP_K: int = 200
     
-
-    
+    EMBEDDING_SERVER_QWEN: Optional[str] = None
+    COHERE_API_KEYS: Optional[List[str]] = None
     # Embedding Server URL (for remote embedding API)
-    EMBEDDING_SERVER_URL: Optional[str] = None
+    EMBEDDING_SERVER_MULTIMODAL: Optional[str] = None
     
     # Elasticsearch settings (if used)
     ELASTICSEARCH_HOST: Optional[str] = None
@@ -78,6 +78,13 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v if isinstance(v, list) else []
+    
+    @field_validator("COHERE_API_KEYS", mode="before")
+    @classmethod
+    def parse_keys(cls, v):
+        if isinstance(v, str):
+            return [k.strip() for k in v.split(",") if k.strip()]
+        return v
 
 
 @lru_cache()

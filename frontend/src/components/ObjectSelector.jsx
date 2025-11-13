@@ -2,14 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 
 // Common objects list - can be replaced with API call later
 const AVAILABLE_OBJECTS = [
-  'car', 'helmet', 'person', 'bicycle', 'motorcycle', 'bus', 'truck',
-  'dog', 'cat', 'bird', 'horse', 'cow', 'sheep',
-  'chair', 'table', 'sofa', 'bed', 'laptop', 'phone', 'book',
-  'bottle', 'cup', 'bowl', 'fork', 'knife', 'spoon',
-  'traffic light', 'stop sign', 'parking meter', 'bench',
-  'umbrella', 'handbag', 'backpack', 'suitcase',
-  'sports ball', 'kite', 'baseball bat', 'skateboard',
-  'surfboard', 'tennis racket', 'bottle', 'wine glass'
+ 'Airplane', 'Animal', 'Balloon', 'Bicycle', 'Bicycle wheel', 'Billboard', 'Boat', 'Book', 'Box', 'Boy', 'Building', 'Bus', 'Canoe', 'Car', 'Chair', 'Clothing', 'Coffee cup', 'Curtain', 'Dairy Product', 'Dress', 'Fast food', 'Fedora', 'Flag', 'Food', 'Football', 'Footwear', 'Girl', 'Glasses', 'Hat', 'Helmet', 'House', 'Human face', 'Human leg', 'Jacket', 'Land vehicle', 'Limousine', 'Man', 'Microphone', 'Mobile phone', 'Motorcycle', 'Office building', 'Palm tree', 'Person', 'Plant', 'Plastic bag', 'Poster', 'Saucer', 'Shirt', 'Skyscraper', 'Snack', 'Sports equipment', 'Sports uniform', 'Stairs', 'Suit', 'Sun hat', 'Table', 'Tie', 'Tire', 'Traffic sign', 'Tree', 'Trousers', 'Truck', 'Umbrella', 'Van', 'Vehicle registration plate', 'Wheel', 'Window', 'Woman'
 ]
 
 function ObjectSelector({ selectedObjects, onSelectionChange, disabled = false }) {

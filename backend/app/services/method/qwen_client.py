@@ -1,3 +1,6 @@
+"""
+Qwen3-Embedding-8B text embedding client - calls remote embedding API
+"""
 import requests
 import numpy as np
 from typing import List, Union
@@ -7,19 +10,19 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
-class BigGClient:    
+class QwenClient:
     def __init__(self, base_url: str = None):
-        self.base_url = base_url or settings.EMBEDDING_SERVER_MULTIMODAL
+        self.base_url = base_url or settings.EMBEDDING_SERVER_QWEN
         if not self.base_url:
-            raise ValueError("EMBEDDING_SERVER_MULTIMODAL must be set in environment variables")
+            raise ValueError("EMBEDDING_SERVER_QWEN must be set in environment variables")
+
         self.base_url = self.base_url.rstrip("/")
-        self.timeout = 60
+        self.timeout = 60  
 
     def extract_text_embedding(
         self,
         texts: Union[str, List[str]]
     ) -> np.ndarray:
-
         if isinstance(texts, str):
             texts = [texts]
 
@@ -30,7 +33,7 @@ class BigGClient:
 
         for text in texts:
             try:
-                url = f"{self.base_url}/embedding/bigg/text"
+                url = f"{self.base_url}/embedding/qwen/text"
                 data = {"text": text}
 
                 response = requests.post(url, json=data, timeout=self.timeout)
@@ -38,10 +41,11 @@ class BigGClient:
 
                 result = response.json()
                 emb = np.array(result["embedding"], dtype=np.float32)
+
                 embeddings.append(emb)
 
             except Exception as e:
-                logger.error(f"Error extracting CLIP bigG text embedding: {e}")
+                logger.error(f"Error extracting Qwen text embedding: {e}")
                 return np.array([])
 
         return np.vstack(embeddings) if embeddings else np.array([])

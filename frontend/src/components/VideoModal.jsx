@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 
 function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping }) {
   const [videoId, setVideoId] = useState(null)
   const [videoFolder, setVideoFolder] = useState(null)
   const [frameIdx, setFrameIdx] = useState(null)
   const [timestamp, setTimestamp] = useState(0)
+  const modalBackdropRef = useRef(null)
 
   useEffect(() => {
     if (!result || !isOpen) {
@@ -12,8 +13,7 @@ function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping }) {
       return
     }
 
-    // Parse keyframe_path to extract folder and frame_idx
-    // Example: "/keyframes/L01_V001/0.webp"
+
     const keyframePath = result.keyframe_path
     console.log('VideoModal: keyframe_path =', keyframePath)
     
@@ -22,7 +22,6 @@ function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping }) {
       return
     }
 
-    // Remove leading slash if present
     const cleanPath = keyframePath.startsWith('/') ? keyframePath.substring(1) : keyframePath
     const pathParts = cleanPath.split('/')
     console.log('VideoModal: keyframePath =', keyframePath)
@@ -88,6 +87,19 @@ function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping }) {
     }
   }, [result, isOpen, mediaIndex, fpsMapping])
 
+  // Prevent background scrolling when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Save original overflow to restore later
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow || ''
+      }
+    }
+    return undefined
+  }, [isOpen])
+
   if (!isOpen || !result) return null
 
   // Build YouTube embed URL with timestamp
@@ -97,11 +109,19 @@ function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping }) {
 
   return (
     <div
-      className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4"
+      ref={modalBackdropRef}
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       onClick={onClose}
+      style={{
+        // Position relative to main content area
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+      }}
     >
       <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

@@ -7,9 +7,11 @@ from pathlib import Path
 
 from app.core.config import settings
 from app.logger.logger import log_search_query
-from app.services.multimodel_search import get_multimodel_search
+from app.services.method.multimodel_search import get_multimodel_search
 from app.services.method.asr_ocr import get_asr_ocr_search
+from app.services.method.ic_search import get_ic_search
 from app.utils.mapping import load_mapping_kf, load_mapping_scene
+from app.services.method.object_filter import ObjectFilterSearch   # ← ADD
 
 router = APIRouter()
 
@@ -54,21 +56,55 @@ async def search(request: SearchRequest):
     try:
         results: List[Dict[str, Any]] = []
 
+
         if method == "text":
-            asr_ocr = get_asr_ocr_search()
-            results = asr_ocr.search_asr(request.query, top_k=top_k)
+            results = get_asr_ocr_search().search_asr(request.query, top_k=top_k)
+
         elif method == "ocr":
-            asr_ocr = get_asr_ocr_search()
-            results = asr_ocr.search_ocr(request.query, top_k=top_k)
-        elif method in {"clip", "beit3", "bigg", "caption"}:
-            search_engine = get_multimodel_search()
-            target_model = method if method in {"clip", "beit3", "bigg"} else "clip"
-            results = search_engine.search_single_model(request.query, model=target_model, top_k=top_k)
+            results = get_asr_ocr_search().search_ocr(request.query, top_k=top_k)
+
+        elif method in {"clip", "beit3", "bigg"}:
+            results = get_multimodel_search().search_single_model(
+                request.query,
+                model=method,
+                top_k=top_k
+            )
+
         elif method == "ensemble":
-            search_engine = get_multimodel_search()
-            results = search_engine.search(request.query, top_k=top_k)
+            results = get_multimodel_search().search(
+                request.query,
+                top_k=top_k
+            )
+
+        elif method == "caption":
+            results = get_ic_search().search(
+                request.query,
+                top_k=top_k
+            )
+
         else:
-            raise HTTPException(status_code=400, detail=f"Unsupported search method: {request.method}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported search method: {request.method}"
+            )
+
+
+        filters = request.filters or {}
+        selected_objects = filters.get("selectedObjects", [])
+        object_filter_enabled = filters.get("objectFilter", False)
+
+        if object_filter_enabled and selected_objects:
+            obj_filter = ObjectFilterSearch()
+
+            original_ids = [str(r["id"]) for r in results]
+
+            filtered_ids = obj_filter.filter(
+                original_ids,
+                selected_objects
+            )
+
+            results = [r for r in results if str(r["id"]) in filtered_ids]
+
 
         duration_ms = (time.time() - start_time) * 1000
         log_search_query(
@@ -86,19 +122,21 @@ async def search(request: SearchRequest):
             query=request.query,
             method=method
         )
+
     except HTTPException:
         raise
+
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
     except Exception as exc:
-        duration_ms = (time.time() - start_time) * 1000
         log_search_query(
             query=request.query,
             method=method,
             top_k=top_k,
             filters=request.filters,
             results_count=0,
-            duration_ms=duration_ms
+            duration_ms=(time.time() - start_time) * 1000
         )
         raise HTTPException(status_code=500, detail=f"Search error: {exc}")
 
