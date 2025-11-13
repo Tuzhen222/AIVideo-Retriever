@@ -2,7 +2,7 @@ import React, { useState, useImperativeHandle, forwardRef } from 'react'
 import ToggleButton from '../components/ToggleButton'
 import ObjectSelector from '../components/ObjectSelector'
 
-const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange }, ref) {
+const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange, onSearch, isSearching = false }, ref) {
   const [isOpen, setIsOpen] = useState(true)
   const [backgroundInfo, setBackgroundInfo] = useState('')
   
@@ -11,13 +11,13 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
     {
       id: 1,
       query: '',
+      ocrText: '',
       selectedObjects: [],
       toggles: {
         multimodal: false,
         ic: false,
         asr: false,
         ocr: false,
-        genImage: false,
         objectFilter: false,
       }
     }
@@ -30,18 +30,20 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
       setQuerySections([{
         id: 1,
         query: '',
+        ocrText: '',
         selectedObjects: [],
         toggles: {
           multimodal: false,
           ic: false,
           asr: false,
           ocr: false,
-          genImage: false,
           objectFilter: false,
         }
       }])
     },
-    getQuerySectionsCount: () => querySections.length
+    getQuerySectionsCount: () => querySections.length,
+    getQuerySections: () => querySections,
+    getBackgroundInfo: () => backgroundInfo
   }))
 
   // Notify parent when query sections change
@@ -57,13 +59,13 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
     setQuerySections([...querySections, {
       id: newId,
       query: '',
+      ocrText: '',
       selectedObjects: [],
       toggles: {
         multimodal: false,
         ic: false,
         asr: false,
         ocr: false,
-        genImage: false,
         objectFilter: false,
       }
     }])
@@ -105,7 +107,6 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
       newToggles.multimodal = false
       newToggles.ic = false
       newToggles.ocr = false
-      newToggles.genImage = false
       newToggles.asr = true
     }
     // If any other search method toggle is being turned on (excluding objectFilter)
@@ -136,6 +137,35 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
     }
   }, [hasSearched])
 
+  // Handle Enter key press for search
+  const handleKeyDown = (e, isBackgroundInfo = false) => {
+    // Enter without Shift triggers search
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (onSearch && !isSearching) {
+        onSearch()
+      }
+    }
+    // Shift+Enter allows newline (default behavior)
+  }
+
+  // Auto-resize textarea function
+  const autoResizeTextarea = (e, maxHeight = null) => {
+    const textarea = e.target
+    textarea.style.height = 'auto'
+    const scrollHeight = textarea.scrollHeight
+    
+    if (maxHeight && scrollHeight > maxHeight) {
+      // If exceeds max height, set to max and enable scroll
+      textarea.style.height = `${maxHeight}px`
+      textarea.style.overflowY = 'auto'
+    } else {
+      // Otherwise, resize to content and disable scroll
+      textarea.style.height = `${scrollHeight}px`
+      textarea.style.overflowY = 'hidden'
+    }
+  }
+
   return (
     <>
       {/* Mobile toggle button - chỉ hiện trên mobile */}
@@ -160,20 +190,25 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
       >
         <div className="p-3 space-y-3">
           {/* Background Info div */}
-          <div className="border-2 border-gray-300 rounded-lg bg-white shadow-sm p-3">
+          <div className="border-2 border-gray-300 rounded-lg bg-white shadow-sm p-2">
             <textarea
               value={backgroundInfo}
-              onChange={(e) => setBackgroundInfo(e.target.value)}
+              onChange={(e) => {
+                setBackgroundInfo(e.target.value)
+                autoResizeTextarea(e, 200)
+              }}
+              onKeyDown={(e) => handleKeyDown(e, true)}
               placeholder="Background Info (Optional)"
-              className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent focus:bg-white transition-colors"
-              rows={3}
+              className="w-full p-1.5 bg-gray-50 border border-gray-300 rounded-md text-xs resize-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent focus:bg-white transition-colors"
+              rows={1}
+              style={{ minHeight: '24px', maxHeight: '200px' }}
             />
           </div>
 
           {/* Query Sections */}
           {querySections.map((section) => {
             const isASREnabled = section.toggles.asr
-            const isOtherToggleEnabled = section.toggles.multimodal || section.toggles.ic || section.toggles.ocr || section.toggles.genImage
+            const isOtherToggleEnabled = section.toggles.multimodal || section.toggles.ic || section.toggles.ocr
 
              return (
                <div key={section.id} className="flex flex-col gap-1.5 border-2 border-gray-300 rounded-lg bg-gray-50 shadow-sm p-2 relative">
@@ -190,18 +225,42 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
                    </button>
                  )}
                  {/* Query input div */}
-                <div className="h-[50px]">
+                <div>
                   <textarea
                     value={section.query}
-                    onChange={(e) => updateQuerySection(section.id, { query: e.target.value })}
+                    onChange={(e) => {
+                      updateQuerySection(section.id, { query: e.target.value })
+                      autoResizeTextarea(e, 150)
+                    }}
+                    onKeyDown={(e) => handleKeyDown(e, false)}
                     placeholder="Query"
-                    className="w-full h-full p-1.5 bg-white border border-gray-300 rounded text-xs resize-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    rows={2}
+                    className="w-full p-1.5 bg-white border border-gray-300 rounded text-xs resize-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    rows={1}
+                    style={{ minHeight: '32px', maxHeight: '150px' }}
+                  />
+                </div>
+
+                {/* OCR text input div - between query and object */}
+                <div>
+                  <textarea
+                    value={section.ocrText || ''}
+                    onChange={(e) => {
+                      updateQuerySection(section.id, { ocrText: e.target.value })
+                      autoResizeTextarea(e, 150)
+                    }}
+                    onKeyDown={(e) => handleKeyDown(e, false)}
+                    placeholder="OCR text"
+                    disabled={!section.toggles.ocr}
+                    className={`w-full p-1.5 bg-white border border-gray-300 rounded text-xs resize-none focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent ${
+                      !section.toggles.ocr ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''
+                    }`}
+                    rows={1}
+                    style={{ minHeight: '24px', maxHeight: '150px' }}
                   />
                 </div>
 
                 {/* Object selection div */}
-                <div className="h-8 relative flex-shrink-0">
+                <div className="relative flex-shrink-0">
                   <ObjectSelector
                     selectedObjects={section.selectedObjects}
                     onSelectionChange={(objects) => updateQuerySection(section.id, { selectedObjects: objects })}
@@ -233,12 +292,6 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
                     label="OCR"
                     isOn={section.toggles.ocr}
                     onToggle={() => handleToggle(section.id, 'ocr')}
-                    disabled={isASREnabled}
-                  />
-                  <ToggleButton
-                    label="Gen Img"
-                    isOn={section.toggles.genImage}
-                    onToggle={() => handleToggle(section.id, 'genImage')}
                     disabled={isASREnabled}
                   />
                   <ToggleButton

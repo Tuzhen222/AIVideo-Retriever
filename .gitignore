@@ -33,14 +33,24 @@ build/
 # Environment & secrets
 .env
 .env.*
+!*.env.example
 *.env
 *.env.*
+!*.env.example
 
 # OS / Editor / Misc
 .DS_Store
 .idea/
 .vscode/
 *.log
+
+# Logs (ignore log files but keep logs directory)
+logs/*.log
+logs/*.log.*
+!logs/.gitkeep
+backend/logs/*.log
+backend/logs/*.log.*
+!backend/logs/.gitkeep
 
 # Docker / Compose
 **/docker/volumes/

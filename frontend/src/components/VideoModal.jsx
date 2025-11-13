@@ -1,0 +1,183 @@
+import React, { useState, useEffect, useRef } from 'react'
+
+function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping }) {
+  const [videoId, setVideoId] = useState(null)
+  const [videoFolder, setVideoFolder] = useState(null)
+  const [frameIdx, setFrameIdx] = useState(null)
+  const [timestamp, setTimestamp] = useState(0)
+  const modalBackdropRef = useRef(null)
+
+  useEffect(() => {
+    if (!result || !isOpen) {
+      console.log('VideoModal: No result or not open', { result, isOpen })
+      return
+    }
+
+
+    const keyframePath = result.keyframe_path
+    console.log('VideoModal: keyframe_path =', keyframePath)
+    
+    if (!keyframePath) {
+      console.warn('VideoModal: No keyframe_path in result', result)
+      return
+    }
+
+    const cleanPath = keyframePath.startsWith('/') ? keyframePath.substring(1) : keyframePath
+    const pathParts = cleanPath.split('/')
+    console.log('VideoModal: keyframePath =', keyframePath)
+    console.log('VideoModal: cleanPath =', cleanPath)
+    console.log('VideoModal: pathParts =', pathParts)
+    
+    if (pathParts.length < 2) {
+      console.warn('VideoModal: Invalid keyframe_path format - need at least folder/filename', keyframePath)
+      return
+    }
+
+    // Extract folder and filename
+    // Format: "keyframes/L01_V001/0.webp" or "L01_V001/0.webp"
+    let folder, filename
+    if (pathParts[0] === 'keyframes' && pathParts.length >= 3) {
+      // Format: "keyframes/L01_V001/0.webp"
+      folder = pathParts[1] // e.g., "L01_V001"
+      filename = pathParts[2] // e.g., "0.webp"
+    } else if (pathParts.length >= 2) {
+      // Format: "L01_V001/0.webp"
+      folder = pathParts[0] // e.g., "L01_V001"
+      filename = pathParts[1] // e.g., "0.webp"
+    } else {
+      console.warn('VideoModal: Cannot parse keyframe_path', keyframePath)
+      return
+    }
+    
+    const frameIdxValue = parseInt(filename.replace('.webp', ''), 10)
+
+    console.log('VideoModal: folder =', folder, 'frameIdx =', frameIdxValue)
+    console.log('VideoModal: mediaIndex loaded?', !!mediaIndex)
+    console.log('VideoModal: mediaIndex keys sample:', mediaIndex ? Object.keys(mediaIndex).slice(0, 5) : null)
+    console.log('VideoModal: mediaIndex has folder?', mediaIndex ? mediaIndex[folder] !== undefined : false)
+
+    setVideoFolder(folder)
+    setFrameIdx(frameIdxValue)
+
+    // Get YouTube video ID from mediaIndex
+    if (mediaIndex && mediaIndex[folder]) {
+      const youtubeUrl = mediaIndex[folder]
+      console.log('VideoModal: YouTube URL =', youtubeUrl)
+      
+      // Extract video ID from YouTube URL
+      // Format: "https://youtube.com/watch?v=VIDEO_ID"
+      const match = youtubeUrl.match(/[?&]v=([^&]+)/)
+      if (match) {
+        const extractedVideoId = match[1]
+        console.log('VideoModal: Extracted video ID =', extractedVideoId)
+        setVideoId(extractedVideoId)
+      } else {
+        console.warn('VideoModal: Could not extract video ID from URL', youtubeUrl)
+      }
+    } else {
+      console.warn('VideoModal: Folder not found in mediaIndex', { folder, mediaIndexKeys: mediaIndex ? Object.keys(mediaIndex).slice(0, 5) : null })
+    }
+
+    // Calculate timestamp from frame_idx and fps
+    if (fpsMapping && fpsMapping[folder] && !isNaN(frameIdxValue)) {
+      const fps = fpsMapping[folder]
+      const timeInSeconds = frameIdxValue / fps
+      setTimestamp(Math.floor(timeInSeconds))
+      console.log('VideoModal: Timestamp =', Math.floor(timeInSeconds), 'seconds (FPS:', fps, ')')
+    }
+  }, [result, isOpen, mediaIndex, fpsMapping])
+
+  // Prevent background scrolling when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Save original overflow to restore later
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = originalOverflow || ''
+      }
+    }
+    return undefined
+  }, [isOpen])
+
+  if (!isOpen || !result) return null
+
+  // Build YouTube embed URL with timestamp
+  const youtubeEmbedUrl = videoId
+    ? `https://www.youtube.com/embed/${videoId}?start=${timestamp}&autoplay=1&enablejsapi=1&modestbranding=1&rel=0`
+    : null
+
+  return (
+    <div
+      ref={modalBackdropRef}
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+      style={{
+        // Position relative to main content area
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+      }}
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex justify-between items-center p-3 sm:p-4 border-b">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Video Details</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-xl sm:text-2xl font-bold leading-none"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-3 sm:p-4 md:p-6">
+          {/* Metadata - Compact */}
+          <div className="mb-3 sm:mb-4">
+            <div className="text-xs sm:text-sm text-gray-600 flex flex-wrap gap-x-3 sm:gap-x-4 gap-y-1">
+              <span><span className="font-medium">Folder:</span> {videoFolder || 'N/A'}</span>
+              <span><span className="font-medium">Frame:</span> {frameIdx !== null ? frameIdx : 'N/A'}</span>
+              {fpsMapping && videoFolder && fpsMapping[videoFolder] && (
+                <span><span className="font-medium">FPS:</span> {fpsMapping[videoFolder]}</span>
+              )}
+              <span>
+                <span className="font-medium">Time:</span>{' '}
+                {timestamp > 0
+                  ? `${Math.floor(timestamp / 60)}:${String(timestamp % 60).padStart(2, '0')}`
+                  : '0:00'}
+              </span>
+            </div>
+          </div>
+
+          {/* YouTube Video Embed */}
+          <div>
+            {youtubeEmbedUrl ? (
+              <div className="relative w-full pb-[56.25%] bg-gray-100 rounded-lg overflow-hidden">
+                <iframe
+                  src={youtubeEmbedUrl}
+                  title="YouTube video player"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="absolute top-0 left-0 w-full h-full"
+                ></iframe>
+              </div>
+            ) : (
+              <div className="relative w-full pb-[56.25%] bg-gray-100 rounded-lg flex items-center justify-center">
+                <p className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm sm:text-base">Video not available</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default VideoModal
+

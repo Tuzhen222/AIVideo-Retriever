@@ -5,7 +5,7 @@ import StageButtons from '../components/StageButtons'
 import ViewControls from '../components/ViewControls'
 import QButtons from '../components/QButtons'
 
-function Header({ onSearch, onClear, hasSearched, querySectionsCount, viewMode, onViewModeChange }) {
+function Header({ onSearch, onClear, hasSearched, querySectionsCount, viewMode, onViewModeChange, isSearching = false }) {
   const [selectedQ, setSelectedQ] = useState('Q0')
   const [selectedStage, setSelectedStage] = useState(null)
   const [selectedTemporal, setSelectedTemporal] = useState(false)
@@ -53,8 +53,8 @@ function Header({ onSearch, onClear, hasSearched, querySectionsCount, viewMode, 
     <div className="fixed top-0 left-0 right-0 bg-red-400 px-3 py-1 flex items-center gap-2 h-6 z-50">
       {/* Buttons container - Clear and Search */}
       <div className="flex items-center gap-2">
-        <ClearButton onClick={handleClear} />
-        <SearchButton onClick={handleSearch} />
+        <ClearButton onClick={handleClear} disabled={isSearching} />
+        <SearchButton onClick={handleSearch} isSearching={isSearching} />
       </div>
 
       {/* Stage buttons và Q buttons container */}

@@ -12,4 +12,3 @@ class APIKeyManager:
         return key
     def get_key_usage(self):
         return self.keys
-    

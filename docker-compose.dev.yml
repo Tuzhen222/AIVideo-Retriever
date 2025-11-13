@@ -1,0 +1,140 @@
+# Development docker-compose with hot-reload
+# Usage: docker-compose -f docker-compose.dev.yml up
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aivideo-backend-dev
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      # Override only Docker-specific values (service names, not localhost)
+      - QDRANT_HOST=qdrant  # Use service name in Docker network
+      - ELASTICSEARCH_HOST=elasticsearch  # Use service name in Docker network
+      - ELASTICSEARCH_PORT=9200
+      # All other values (DEFAULT_TOP_K, CLIP_WEIGHT, etc.) will be read from .env file
+    volumes:
+      # Mount code for hot-reload
+      - ./backend/app:/app/app
+      # Mount data (read-only)
+      - ./backend/app/data:/app/app/data:ro
+      # Mount logs
+      - ./backend/logs:/app/logs
+    networks:
+      - aivideo-network
+    restart: unless-stopped
+    depends_on:
+      qdrant:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: aivideo-frontend-dev
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+      - qdrant
+    volumes:
+      # Mount source code for hot-reload
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.js:/app/vite.config.js
+      - ./frontend/package.json:/app/package.json
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend/postcss.config.js:/app/postcss.config.js
+      # Exclude node_modules
+      - /app/node_modules
+    networks:
+      - aivideo-network
+    restart: unless-stopped
+    environment:
+      - VITE_API_BASE_URL=http://backend:8000
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: aivideo-qdrant-dev
+    ports:
+      - "6333:6333"  # HTTP API
+      - "6334:6334"  # gRPC
+    volumes:
+      - qdrant_storage_dev:/qdrant/storage
+    networks:
+      - aivideo-network
+    restart: unless-stopped
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: aivideo-elasticsearch-dev
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elasticsearch_data_dev:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - aivideo-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: aivideo-kibana-dev
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_NAME=kibana
+      - SERVER_HOST=0.0.0.0
+    ports:
+      - "5601:5601"
+    networks:
+      - aivideo-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  qdrant_storage_dev:
+    driver: local
+  elasticsearch_data_dev:
+    driver: local
+
+networks:
+  aivideo-network:
+    driver: bridge
+
