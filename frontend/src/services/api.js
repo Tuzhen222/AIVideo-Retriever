@@ -57,7 +57,7 @@ class ApiService {
    * @param {number} searchParams.top_k - Number of results
    * @param {Object} searchParams.filters - Additional filters
    */
-  async search({ query, method = 'ensemble', top_k = null, filters = null }) {
+  async search({ query, method = 'ensemble', top_k = null, filters = null, queries = null, mode = 'E' }) {
     return this.request('/api/search', {
       method: 'POST',
       body: JSON.stringify({
@@ -65,9 +65,12 @@ class ApiService {
         method,
         top_k,
         filters,
+        queries,   // IMPORTANT
+        mode       // IMPORTANT
       }),
     })
   }
+
 
   /**
    * Get available search methods

@@ -28,7 +28,8 @@ RUN uv pip install --system --no-cache \
     "requests>=2.31.0" \
     "Pillow>=10.0.0" \
     "elasticsearch>=8.0.0,<9.0.0" \
-    "cohere>=5.0.0" 
+    "cohere>=5.0.0" \
+    "deep-translator>=1.11.4" 
 
 # Copy application code
 COPY app/ ./app/

@@ -82,9 +82,6 @@ class ICSearch:
         if empty_text_ids:
             logger.warning(f"[IC] EMPTY TEXT FOUND for IDs: {empty_text_ids[:20]} (showing max 20)")
 
-        for i in range(min(3, len(doc_texts))):
-            logger.info(f"[IC] SAMPLE DOC {doc_ids[i]} TEXT (first 200 chars): {doc_texts[i][:200]}")
-
         co = self._client()
 
         rerank = co.rerank(

@@ -110,11 +110,13 @@ const Sidebar = forwardRef(function Sidebar({ hasSearched, onQuerySectionsChange
       newToggles.asr = true
     }
     // If any other search method toggle is being turned on (excluding objectFilter)
-    else if (key !== 'asr' && key !== 'objectFilter' && !section.toggles[key]) {
-      // Turn off ASR (if it was on)
-      newToggles.asr = false
-      // Allow this toggle to be turned on
-      newToggles[key] = true
+    else if (key !== 'asr' && key !== 'objectFilter') {
+      // Turn off ASR (if it was on) - ASR cannot coexist with other methods
+      if (section.toggles.asr) {
+        newToggles.asr = false
+      }
+      // Toggle this key (allow multiple non-ASR methods)
+      newToggles[key] = !section.toggles[key]
     }
     // If toggling off, just update that toggle
     else {

@@ -83,9 +83,7 @@ function App() {
     }
 
     querySections.forEach(section => {
-      if (safeToggle(section.toggles, "ocr") && section.ocrText?.trim() !== "") {
-        parts.push(section.ocrText.trim())
-      }
+      // Only add query text (not ocrText here - it's sent separately)
       if (section.query?.trim() !== "") {
         parts.push(section.query.trim())
       }
@@ -100,17 +98,39 @@ function App() {
     const querySections = sidebarRef.current.getQuerySections()
     const backgroundInfo = sidebarRef.current.getBackgroundInfo()
 
-    /** 1) Validate: at least one query exists */
-    const hasValidQuery =
-      querySections.some(section => {
-        const hasQuery = section.query && section.query.trim() !== ""
-        const hasOCR = safeToggle(section.toggles, "ocr") && section.ocrText?.trim() !== ""
-        return hasQuery || hasOCR
-      }) ||
-      (backgroundInfo && backgroundInfo.trim() !== "")
+    /** 1) Validate: query required for non-OCR methods, ocrText required for OCR */
+    let hasValidationError = false
+    let validationMessage = ""
 
-    if (!hasValidQuery) {
-      setSearchError("Please enter at least one query, OCR text (if OCR enabled), or background info")
+    for (const section of querySections) {
+      const t = section.toggles || {}
+      const hasQuery = section.query && section.query.trim() !== ""
+      const hasOcrText = section.ocrText && section.ocrText.trim() !== ""
+      
+      // Check if any method requiring query is enabled
+      const needsQuery = safeToggle(t, "multimodal") || safeToggle(t, "multiModal") || 
+                         safeToggle(t, "ic") || safeToggle(t, "caption") || 
+                         safeToggle(t, "asr")
+      
+      const hasOcrOnly = safeToggle(t, "ocr") && !needsQuery
+      
+      // If methods requiring query are enabled, query must not be empty
+      if (needsQuery && !hasQuery) {
+        validationMessage = "Query field is required for Multimodal, IC, and ASR methods"
+        hasValidationError = true
+        break
+      }
+      
+      // If only OCR is enabled, ocrText must not be empty
+      if (hasOcrOnly && !hasOcrText) {
+        validationMessage = "OCR text field is required when OCR toggle is enabled"
+        hasValidationError = true
+        break
+      }
+    }
+
+    if (hasValidationError) {
+      setSearchError(validationMessage)
       return
     }
 
@@ -155,6 +175,7 @@ function App() {
       const searchParams = {
         queries: querySections.map(sec => ({
           query: sec.query,
+          ocrText: sec.ocrText || "",  // Include ocrText separately
           toggles: sec.toggles,
           selectedObjects: sec.selectedObjects
         })),
@@ -166,11 +187,24 @@ function App() {
         }
       }
 
+      console.log('[DEBUG] Query sections:', querySections)
+      console.log('[DEBUG] Search params:', searchParams)
+      console.log('[DEBUG] Sending to API:', {
+        query: combinedQuery,
+        method: searchMethod,
+        top_k: null,
+        filters: searchParams.filters,
+        queries: searchParams.queries,
+        mode: viewMode
+      })
+
       const response = await api.search({
         query: combinedQuery,
         method: searchMethod,
         top_k: null,
-        filters: searchParams.filters
+        filters: searchParams.filters,
+        queries: searchParams.queries,
+        mode: viewMode  // E = ensemble only, A = all methods
       })
 
       setSearchResults(response)
