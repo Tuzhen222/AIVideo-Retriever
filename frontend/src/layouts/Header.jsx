@@ -1,18 +1,32 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import ClearButton from '../components/ClearButton'
 import SearchButton from '../components/SearchButton'
 import StageButtons from '../components/StageButtons'
 import ViewControls from '../components/ViewControls'
 import QButtons from '../components/QButtons'
 
-function Header({ onSearch, onClear, hasSearched, querySectionsCount, viewMode, onViewModeChange, isSearching = false }) {
-  const [selectedQ, setSelectedQ] = useState('Q0')
-  const [selectedStage, setSelectedStage] = useState(null)
+function Header({ onSearch, onClear, hasSearched, querySectionsCount, viewMode, onViewModeChange, isSearching = false, selectedQ: parentSelectedQ, onQChange, selectedStage: parentSelectedStage, onStageChange }) {
+  const [selectedQ, setSelectedQ] = useState(parentSelectedQ || 'Q0')
+  const [selectedStage, setSelectedStage] = useState(parentSelectedStage || 1)
   const [selectedTemporal, setSelectedTemporal] = useState(false)
+  
+  // Sync with parent selectedQ
+  useEffect(() => {
+    if (parentSelectedQ !== undefined) {
+      setSelectedQ(parentSelectedQ)
+    }
+  }, [parentSelectedQ])
+
+  // Sync with parent selectedStage
+  useEffect(() => {
+    if (parentSelectedStage !== undefined) {
+      setSelectedStage(parentSelectedStage)
+    }
+  }, [parentSelectedStage])
   const handleClear = () => {
     // Clear logic sẽ được thêm sau
     console.log('Clear clicked')
-    setSelectedStage(null)
+    setSelectedStage(1)
     setSelectedTemporal(false)
     setSelectedQ('Q0')
     if (onClear) {
@@ -34,6 +48,9 @@ function Header({ onSearch, onClear, hasSearched, querySectionsCount, viewMode, 
     setSelectedStage(stage)
     setSelectedTemporal(false)
     setSelectedQ('Q0') // Reset về Q0 khi đổi stage
+    if (onStageChange) {
+      onStageChange(stage)  // Notify parent
+    }
   }
 
   const handleTemporalResult = () => {
@@ -47,6 +64,9 @@ function Header({ onSearch, onClear, hasSearched, querySectionsCount, viewMode, 
   const handleQClick = (q) => {
     setSelectedQ(q)
     console.log(`${q} clicked`)
+    if (onQChange) {
+      onQChange(q)  // Notify parent
+    }
   }
 
   return (

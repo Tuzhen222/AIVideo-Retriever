@@ -59,8 +59,9 @@ async def health_check():
     }
 
 
-from app.routers import search
-app.include_router(search.router, prefix="/api", tags=["search"])
+from app.routers import search_augmented, search_multistage
+app.include_router(search_augmented.router, prefix="/api", tags=["search"])
+app.include_router(search_multistage.router, prefix="/api", tags=["multistage"])
 
 
 keyframe_dir = settings.KEYFRAME_DIR

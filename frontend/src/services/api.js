@@ -65,8 +65,8 @@ class ApiService {
         method,
         top_k,
         filters,
-        queries,   // IMPORTANT
-        mode       // IMPORTANT
+        queries,  
+        mode       
       }),
     })
   }
@@ -129,7 +129,30 @@ class ApiService {
       top_k: options.top_k || null,
       filters: options.filters || null,
     });
-  }  
+  }
+
+  /**
+   * Multi-stage search with independent query sections
+   * @param {Array} stages - Array of stage objects with query, toggles, selected_objects
+   * @param {Object} options - Search options (top_k, mode)
+   */
+  async searchMultistage(stages, options = {}) {
+    return this.request('/api/search/multistage', {
+      method: 'POST',
+      body: JSON.stringify({
+        stages: stages.map((stage, index) => ({
+          stage_id: stage.stage_id || index + 1,
+          stage_name: stage.stage_name || `Stage ${index + 1}`,
+          query: stage.query || "",
+          ocr_text: stage.ocr_text || "",
+          toggles: stage.toggles || {},
+          selected_objects: stage.selected_objects || []
+        })),
+        top_k: options.top_k || null,
+        mode: options.mode || 'E'
+      })
+    })
+  }
 }
 
 // Export singleton instance

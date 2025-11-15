@@ -29,7 +29,8 @@ RUN uv pip install --system --no-cache \
     "Pillow>=10.0.0" \
     "elasticsearch>=8.0.0,<9.0.0" \
     "cohere>=5.0.0" \
-    "deep-translator>=1.11.4" 
+    "deep-translator>=1.11.4" \
+    "google-generativeai>=0.3.0" 
 
 # Copy application code
 COPY app/ ./app/

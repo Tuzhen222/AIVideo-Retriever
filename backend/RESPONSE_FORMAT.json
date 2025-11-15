@@ -1,0 +1,69 @@
+{
+  "query_0": {
+    "text": "black cat on the roof",
+    "method": {
+      "ocr": [
+        ["id", "score"]
+      ],
+      "multimodal": [
+        ["id", "score"]
+      ],
+      "ic": [
+        ["id", "score"]
+      ],
+      "ensemble": [
+        ["id", "score"]
+      ]
+    }
+  },
+  "query_1": {
+    "text": "a person riding a bicycle",
+    "method": {
+      "ocr": [
+        ["id", "score"]
+      ],
+      "multimodal": [
+        ["id", "score"]
+      ],
+      "ic": [
+        ["id", "score"]
+      ],
+      "ensemble": [
+        ["id", "score"]
+      ]
+    }
+  },
+  "query_2": {
+    "text": "sunset over the mountains",
+    "method": {
+      "ocr": [
+        ["id", "score"]
+      ],
+      "multimodal": [
+        ["id", "score"]
+      ],
+      "ic": [
+        ["id", "score"]
+      ],
+      "ensemble": [
+        ["id", "score"]
+      ]
+    }
+  },
+  "query_3": {
+    "method": {
+      "ocr_ensemble": [
+        ["id", "score"]
+      ],
+      "multimodal_ensemble": [
+        ["id", "score"]
+      ],
+      "ic_ensemble": [
+        ["id", "score"]
+      ],
+      "ensemble_of_ensemble": [
+        ["id", "score"]
+      ]
+    }
+  }
+}

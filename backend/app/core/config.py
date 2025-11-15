@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     COHERE_API_KEYS: Optional[List[str]] = None
     # Embedding Server URL (for remote embedding API)
     EMBEDDING_SERVER_MULTIMODAL: Optional[str] = None
-    
+    GEMINI_API_KEYS: Optional[List[str]] = None
     # Elasticsearch settings (if used)
     ELASTICSEARCH_HOST: Optional[str] = None
     ELASTICSEARCH_PORT: int = 9200
@@ -82,6 +82,13 @@ class Settings(BaseSettings):
     @field_validator("COHERE_API_KEYS", mode="before")
     @classmethod
     def parse_keys(cls, v):
+        if isinstance(v, str):
+            return [k.strip() for k in v.split(",") if k.strip()]
+        return v
+    
+    @field_validator("GEMINI_API_KEYS", mode="before")
+    @classmethod
+    def parse_gemini_keys(cls, v):
         if isinstance(v, str):
             return [k.strip() for k in v.split(",") if k.strip()]
         return v
