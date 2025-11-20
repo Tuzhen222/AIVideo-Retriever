@@ -108,10 +108,13 @@ function App() {
   useEffect(() => {
     if (fullResponse && hasSearched) {
       console.log('[App] Re-extracting results due to viewMode/Q/Stage change')
+      console.log('[App] Current viewMode:', viewMode, 'fullResponse has per_method_results:', !!fullResponse.per_method_results)
+      
       const transformedResults = extractResultsForDisplay(fullResponse, selectedQ, viewMode, selectedStage, temporalMode)
+      console.log('[App] Transformed results:', transformedResults)
       setSearchResults(transformedResults)
     }
-  }, [viewMode, selectedQ, selectedStage, temporalMode])
+  }, [viewMode, selectedQ, selectedStage, temporalMode, fullResponse, hasSearched])
 
   const handleImageClick = (result) => {
     console.log('[App.handleImageClick] Clicked result:', result)
@@ -578,14 +581,6 @@ function App() {
       setIsSearching(false)
     }
   }
-
-  // Update display when selectedQ, viewMode, selectedStage, or temporalMode changes
-  useEffect(() => {
-    if (fullResponse) {
-      const transformedResults = extractResultsForDisplay(fullResponse, selectedQ, viewMode, selectedStage, temporalMode)
-      setSearchResults(transformedResults)
-    }
-  }, [selectedQ, viewMode, fullResponse, selectedStage, temporalMode])
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-gray-50">

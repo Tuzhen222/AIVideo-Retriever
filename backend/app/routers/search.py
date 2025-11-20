@@ -322,15 +322,12 @@ async def search(request: SearchRequest):
             filtered_ids = obj_filter.filter(original_ids, selected_objects)
             final_results = [r for r in final_results if str(r["id"]) in filtered_ids]
 
-        # 7. Determine what to return based on mode
-        if mode == "E":
-            # Mode E: return only ensemble result
-            return_results = final_results
-            return_per_method = None
-        else:
-            # Mode A: return ensemble + all per-method results
-            return_results = final_results
-            return_per_method = per_method_results
+        # 7. Always return per_method_results for frontend flexibility
+        # Frontend can switch between E/A/M modes without re-searching
+        return_results = final_results
+        return_per_method = per_method_results
+        
+        logger.info(f"[ENSEMBLE] Mode={mode}, always returning per_method_results for mode switching flexibility")
 
         duration_ms = (time.time() - start_time) * 1000
         log_search_query(
