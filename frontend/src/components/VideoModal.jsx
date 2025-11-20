@@ -5,7 +5,6 @@ function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping }) {
   const [videoFolder, setVideoFolder] = useState(null)
   const [frameIdx, setFrameIdx] = useState(null)
   const [timestamp, setTimestamp] = useState(0)
-  const [showKeyframe, setShowKeyframe] = useState(false)
   const modalBackdropRef = useRef(null)
 
   useEffect(() => {
@@ -104,23 +103,15 @@ function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping }) {
 
   if (!isOpen || !result) return null
 
-  // Build YouTube embed URL with timestamp
-  // Try youtube-nocookie.com domain which has fewer restrictions
+  // Build YouTube embed URL with timestamp and autoplay
   const youtubeEmbedUrl = videoId
-    ? `https://www.youtube-nocookie.com/embed/${videoId}?start=${timestamp}&autoplay=0&rel=0`
-    : null
-
-  // Get keyframe image URL
-  const keyframeUrl = result?.keyframe_path 
-    ? `/keyframes/${result.keyframe_path.replace(/^\/?(keyframes\/)?/, '')}`
+    ? `https://www.youtube-nocookie.com/embed/${videoId}?start=${timestamp}&autoplay=1&rel=0`
     : null
 
   console.log('[VideoModal] ===== DEBUG INFO =====')
   console.log('[VideoModal] videoId:', videoId)
   console.log('[VideoModal] timestamp:', timestamp)
   console.log('[VideoModal] youtubeEmbedUrl:', youtubeEmbedUrl)
-  console.log('[VideoModal] keyframeUrl:', keyframeUrl)
-  console.log('[VideoModal] showKeyframe:', showKeyframe)
   console.log('[VideoModal] result:', result)
   console.log('[VideoModal] ========================')
 
@@ -173,72 +164,16 @@ function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping }) {
 
           {/* Video Player */}
           <div>
-            {youtubeEmbedUrl && !showKeyframe ? (
-              <div className="space-y-2">
-                <div className="relative w-full pb-[56.25%] bg-gray-100 rounded-lg overflow-hidden">
-                  <iframe
-                    src={youtubeEmbedUrl}
-                    title="YouTube video player"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="absolute top-0 left-0 w-full h-full"
-                    onError={() => {
-                      console.error('[VideoModal] YouTube iframe failed to load')
-                      setShowKeyframe(true)
-                    }}
-                  ></iframe>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowKeyframe(true)}
-                    className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded transition-colors"
-                  >
-                    Show Keyframe
-                  </button>
-                  <a
-                    href={`https://www.youtube.com/watch?v=${videoId}&t=${timestamp}s`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
-                  >
-                    Open in YouTube
-                  </a>
-                </div>
-              </div>
-            ) : keyframeUrl ? (
-              <div className="space-y-2">
-                <div className="relative w-full bg-gray-100 rounded-lg overflow-hidden">
-                  <img
-                    src={keyframeUrl}
-                    alt="Keyframe"
-                    className="w-full h-auto"
-                    onError={(e) => {
-                      console.error('[VideoModal] Keyframe image failed to load:', keyframeUrl)
-                      e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23ddd" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" fill="%23999"%3EImage not available%3C/text%3E%3C/svg%3E'
-                    }}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  {youtubeEmbedUrl && (
-                    <>
-                      <button
-                        onClick={() => setShowKeyframe(false)}
-                        className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded transition-colors"
-                      >
-                        Show YouTube Video
-                      </button>
-                      <a
-                        href={`https://www.youtube.com/watch?v=${videoId}&t=${timestamp}s`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
-                      >
-                        Open in YouTube
-                      </a>
-                    </>
-                  )}
-                </div>
+            {youtubeEmbedUrl ? (
+              <div className="relative w-full pb-[56.25%] bg-gray-100 rounded-lg overflow-hidden">
+                <iframe
+                  src={youtubeEmbedUrl}
+                  title="YouTube video player"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="absolute top-0 left-0 w-full h-full"
+                ></iframe>
               </div>
             ) : (
               <div className="relative w-full pb-[56.25%] bg-gray-100 rounded-lg flex items-center justify-center">

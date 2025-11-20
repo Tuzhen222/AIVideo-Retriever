@@ -154,6 +154,38 @@ class ApiService {
       })
     })
   }
+
+  /**
+   * Search by image (image-based search using CLIP)
+   * @param {string} keyframePath - Path to the image (e.g., "/keyframes/L01_V001/123.webp")
+   * @param {number} topK - Number of results to return
+   */
+  async searchByImage(keyframePath, topK = 200) {
+    return this.request('/api/search/by-image', {
+      method: 'POST',
+      body: JSON.stringify({
+        keyframe_path: keyframePath,
+        top_k: topK
+      })
+    })
+  }
+
+  /**
+   * Search by uploading an image file
+   * @param {File} file - Image file
+   * @param {number} topK - Number of results to return
+   */
+  async searchByImageUpload(file, topK = 200) {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('top_k', topK)
+
+    return this.request(`/api/search/by-image-upload?top_k=${topK}`, {
+      method: 'POST',
+      body: formData,
+      headers: {}  // Let browser set Content-Type for FormData
+    })
+  }
 }
 
 // Export singleton instance

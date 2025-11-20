@@ -21,6 +21,8 @@ function App() {
   const [fpsMapping, setFpsMapping] = useState(null)
   const [temporalMode, setTemporalMode] = useState('id')  // 'id' or 'tuple'
   const [isMultiStage, setIsMultiStage] = useState(false)
+  const [imageSearchActive, setImageSearchActive] = useState(false)  // Image search mode
+  const [imageSearchImage, setImageSearchImage] = useState(null)  // Source image for search
   const sidebarRef = useRef(null)
 
   // Load search config on mount
@@ -52,6 +54,55 @@ function App() {
     }
     loadData()
   }, [])
+
+  // Check for image search URL parameter on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const imageSearchPath = urlParams.get('imageSearch')
+    
+    // Only run if we have the URL parameter AND config is loaded AND we haven't already searched
+    if (imageSearchPath && searchConfig.default_top_k && !hasSearched) {
+      console.log('[App] Image search from URL parameter:', imageSearchPath)
+      
+      // Auto-trigger image search
+      const performImageSearch = async () => {
+        setIsSearching(true)
+        setSearchError(null)
+        setImageSearchActive(true)
+        
+        try {
+          const response = await api.searchByImage(imageSearchPath, searchConfig.default_top_k || 200)
+          
+          console.log('[App] Image search response:', response)
+          console.log('[App] First result keyframe_path:', response.results?.[0]?.keyframe_path)
+
+          // Backend already converts paths to /keyframes/ format
+          // No need to transform again, just use as-is
+          const transformedResults = {
+            results: response.results || [],
+            query: `Similar images to: ${imageSearchPath.split('/').pop()}`,
+            method: 'clip-image',
+            total: response.total || 0,
+            queryImage: imageSearchPath
+          }
+          
+          console.log('[App] Transformed results:', transformedResults)
+          console.log('[App] First transformed result:', transformedResults.results?.[0])
+
+          setSearchResults(transformedResults)
+          setHasSearched(true)
+          setImageSearchImage({ keyframe_path: imageSearchPath })
+        } catch (err) {
+          console.error('[App] Image search error:', err)
+          setSearchError(err.message || 'Image search failed')
+        } finally {
+          setIsSearching(false)
+        }
+      }
+      
+      performImageSearch()
+    }
+  }, [searchConfig.default_top_k, hasSearched])
 
   // Re-extract results when viewMode, selectedQ, or selectedStage changes
   useEffect(() => {
@@ -120,10 +171,29 @@ function App() {
     setTemporalMode('id')  // Reset to ID mode
     setIsMultiStage(false)
     setSelectedStage(1)
+    setImageSearchActive(false)
+    setImageSearchImage(null)
     if (sidebarRef.current) {
       sidebarRef.current.reset()
       setQuerySectionsCount(1)
     }
+  }
+
+  const handleImageSearch = async (result) => {
+    console.log('[App] Image search triggered for:', result)
+    
+    if (!result || !result.keyframe_path) {
+      console.error('[App] Invalid result for image search')
+      return
+    }
+
+    // Open image search in new tab
+    // Encode the keyframe path as query parameter
+    const encodedPath = encodeURIComponent(result.keyframe_path)
+    const newTabUrl = `${window.location.origin}${window.location.pathname}?imageSearch=${encodedPath}`
+    
+    console.log('[App] Opening image search in new tab:', newTabUrl)
+    window.open(newTabUrl, '_blank')
   }
 
   // Utility: avoid undefined toggle cases
@@ -261,7 +331,7 @@ function App() {
       }
     }
 
-    // Original augmented search response format (query_0/1/2/3)
+    // Check if this is an augmented search response (query_0/1/2/3 structure)
     const queryMap = {
       'Q0': 'query_0',
       'Q1': 'query_1', 
@@ -272,56 +342,69 @@ function App() {
     const queryKey = queryMap[selectedQ]
     const queryData = response[queryKey]
 
-    if (!queryData || !queryData.methods) {
-      console.warn(`[DEBUG] No data for ${selectedQ}`)
-      return null
-    }
+    // If we have queryData with methods, use augmented response format
+    if (queryData && queryData.methods) {
+      // Mode E: Show only ensemble_of_ensemble
+      if (viewMode === 'E') {
+        const results = queryKey === 'query_3' 
+          ? queryData.methods.ensemble_of_ensemble || []
+          : queryData.methods.ensemble || []
+        
+        return {
+          results,
+          query: queryData.text || response.original_query || response.query,
+          method: response.method,
+          total: results.length
+        }
+      }
 
-    // Mode E: Show only ensemble_of_ensemble
-    if (viewMode === 'E') {
-      const results = queryKey === 'query_3' 
-        ? queryData.methods.ensemble_of_ensemble || []
-        : queryData.methods.ensemble || []
-      
-      return {
-        results,
-        query: queryData.text || response.original_query,
-        method: response.method,
-        total: results.length
+      // Mode A: Show ensemble for selected query
+      if (viewMode === 'A') {
+        const results = queryKey === 'query_3'
+          ? queryData.methods.ensemble_of_ensemble || []
+          : queryData.methods.ensemble || []
+
+        return {
+          results,
+          query: queryData.text || response.original_query || response.query,
+          method: response.method,
+          total: results.length
+        }
+      }
+
+      // Mode M: Show all methods for selected query (20 each)
+      if (viewMode === 'M') {
+        return {
+          results: [],  // No single grid
+          query: queryData.text || response.original_query || response.query,
+          method: response.method,
+          total: 0,
+          allMethods: queryData.methods  // All methods for separate sections
+        }
       }
     }
 
-    // Mode A: Show ensemble for selected query
-    if (viewMode === 'A') {
-      const results = queryKey === 'query_3'
-        ? queryData.methods.ensemble_of_ensemble || []
-        : queryData.methods.ensemble || []
-
+    // Simple response format (direct results array from /api/search)
+    // This is the standard response from the backend: { results, total, query, method, per_method_results }
+    console.log('[DEBUG] Using simple response format')
+    
+    if (viewMode === 'M' && response.per_method_results) {
+      // Mode M: Show per-method results
       return {
-        results,
-        query: queryData.text || response.original_query,
+        results: [],
+        query: response.query,
         method: response.method,
-        total: results.length
+        total: response.total || 0,
+        allMethods: response.per_method_results
       }
     }
 
-    // Mode M: Show all methods for selected query (20 each)
-    if (viewMode === 'M') {
-      return {
-        results: [],  // No single grid
-        query: queryData.text || response.original_query,
-        method: response.method,
-        total: 0,
-        allMethods: queryData.methods  // All methods for separate sections
-      }
-    }
-
-    // Fallback
+    // Mode E or A: Show combined results
     return {
-      results: [],
-      query: queryData.text || response.original_query,
+      results: response.results || [],
+      query: response.query,
       method: response.method,
-      total: 0
+      total: response.total || 0
     }
   }
 
@@ -541,6 +624,7 @@ function App() {
           mediaIndex={mediaIndex}
           fpsMapping={fpsMapping}
           viewMode={viewMode}
+          onImageSearch={handleImageSearch}
         />
       </div>
     </div>

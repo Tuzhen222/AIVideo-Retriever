@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react'
 import VideoModal from '../components/VideoModal'
 import TemporalIDResults from '../components/TemporalIDResults'
 import TemporalTupleResults from '../components/TemporalTupleResults'
+import ImageSearchButton from '../components/ImageSearchButton'
 import api from '../services/api'
 
-function MainContent({ searchResults, isSearching = false, searchError = null, onImageClick = null, selectedResult = null, isModalOpen = false, onCloseModal = null, mediaIndex = null, fpsMapping = null, viewMode = 'E' }) {
+function MainContent({ searchResults, isSearching = false, searchError = null, onImageClick = null, selectedResult = null, isModalOpen = false, onCloseModal = null, mediaIndex = null, fpsMapping = null, viewMode = 'E', onImageSearch = null }) {
   return (
     <div className="fixed top-6 left-0 md:left-52 right-0 bottom-0 bg-white overflow-y-auto">
       <div className="relative w-full h-full">
@@ -52,6 +53,7 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
               <TemporalIDResults 
                 results={searchResults.results}
                 onImageClick={onImageClick}
+                onImageSearch={onImageSearch}
               />
             </div>
           ) : searchResults.temporalMode === 'tuple' ? (
@@ -59,6 +61,7 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
               <TemporalTupleResults 
                 tuples={searchResults.results}
                 onImageClick={onImageClick}
+                onImageSearch={onImageSearch}
               />
             </div>
           ) : viewMode === 'M' && searchResults.allMethods ? (
@@ -80,11 +83,11 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
                       {displayResults.map((result, index) => (
                         <div 
                           key={result.id || index} 
-                          className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                          className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow group relative"
                         >
                           {result.keyframe_path && (
                             <div 
-                              className="aspect-video bg-gray-100 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
+                              className="aspect-video bg-gray-100 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity relative"
                               onClick={() => onImageClick && onImageClick(result)}
                             >
                               <img 
@@ -95,6 +98,9 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
                                   e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ddd"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3ENo Image%3C/text%3E%3C/svg%3E'
                                 }}
                               />
+                              {onImageSearch && (
+                                <ImageSearchButton result={result} onImageSearch={onImageSearch} />
+                              )}
                             </div>
                           )}
                         </div>
@@ -110,11 +116,11 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
               {searchResults.results.map((result, index) => (
                 <div 
                   key={result.id || index} 
-                  className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                  className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow group relative"
                 >
                   {result.keyframe_path && (
                     <div 
-                      className="aspect-video bg-gray-100 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
+                      className="aspect-video bg-gray-100 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity relative"
                       onClick={() => onImageClick && onImageClick(result)}
                     >
                       <img 
@@ -122,9 +128,13 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
                         alt={`Result ${index + 1}`}
                         className="w-full h-full object-cover"
                         onError={(e) => {
+                          console.error('[MainContent] Image load failed:', result.keyframe_path)
                           e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23ddd"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999"%3ENo Image%3C/text%3E%3C/svg%3E'
                         }}
                       />
+                      {onImageSearch && (
+                        <ImageSearchButton result={result} onImageSearch={onImageSearch} />
+                      )}
                     </div>
                   )}
                 </div>

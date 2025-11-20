@@ -1,10 +1,11 @@
 import React from 'react'
+import ImageSearchButton from './ImageSearchButton'
 
 /**
  * Render temporal tuple mode results
  * Shows grouped sequences of frames from different stages (same video, increasing frame indices)
  */
-function TemporalTupleResults({ tuples, onImageClick }) {
+function TemporalTupleResults({ tuples, onImageClick, onImageSearch }) {
   if (!tuples || tuples.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
@@ -32,12 +33,12 @@ function TemporalTupleResults({ tuples, onImageClick }) {
                 return (
                   <div 
                     key={result.id || stageIdx}
-                    className="bg-gray-50 rounded overflow-hidden"
+                    className="bg-gray-50 rounded overflow-hidden group relative"
                   >
                     {/* Keyframe */}
                     {result.keyframe_path && (
                       <div 
-                        className="aspect-video bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity"
+                        className="aspect-video bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity relative"
                         onClick={() => onImageClick && onImageClick(result)}
                       >
                         <img 
@@ -48,6 +49,9 @@ function TemporalTupleResults({ tuples, onImageClick }) {
                             e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="60"%3E%3Crect width="100" height="60" fill="%23ddd"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%23999" font-size="10"%3ENo Image%3C/text%3E%3C/svg%3E'
                           }}
                         />
+                        {onImageSearch && (
+                          <ImageSearchButton result={result} onImageSearch={onImageSearch} />
+                        )}
                       </div>
                     )}
                   </div>

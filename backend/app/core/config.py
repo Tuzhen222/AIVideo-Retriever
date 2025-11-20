@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     INDEX_DIR: str = "app/data/index"
     MAPPING_KF_PATH: str = "app/data/index/mapping_kf.json"
     MAPPING_SCENE_PATH: str = "app/data/index/mapping_scene.json"
+    BASE_DIR: str = ""  # Will be set to backend root directory
+    
+    # Model Server URL (for CLIP/BEiT3/BiGG embeddings)
+    MODEL_SERVER_URL: str = "http://localhost:7000"
     
     # Search settings
     DEFAULT_TOP_K: int = 200
@@ -97,7 +101,12 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings() -> Settings:
     """Get cached settings instance"""
-    return Settings()
+    import os
+    s = Settings()
+    # Set BASE_DIR to backend root directory
+    if not s.BASE_DIR:
+        s.BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    return s
 
 
 settings = get_settings()
