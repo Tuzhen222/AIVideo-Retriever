@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import VideoModal from '../components/VideoModal'
+import TemporalIDResults from '../components/TemporalIDResults'
+import TemporalTupleResults from '../components/TemporalTupleResults'
 import api from '../services/api'
 
 function MainContent({ searchResults, isSearching = false, searchError = null, onImageClick = null, selectedResult = null, isModalOpen = false, onCloseModal = null, mediaIndex = null, fpsMapping = null, viewMode = 'E' }) {
@@ -40,11 +42,27 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
             <p className="text-red-600">{searchError}</p>
           </div>
         </div>
-      ) : (searchResults?.results?.length > 0 || searchResults?.allMethods) ? ( 
+      ) : (searchResults?.results?.length > 0 || searchResults?.allMethods || searchResults?.temporalMode) ? ( 
         // Search results
         <div className="p-6" key={`${searchResults.query}-${viewMode}-${Date.now()}`}>
-          {/* Mode M: Show separate sections for each method */}
-          {viewMode === 'M' && searchResults.allMethods ? (
+          {/* Temporal results rendering */}
+          {searchResults.temporalMode === 'id' ? (
+            <div>
+
+              <TemporalIDResults 
+                results={searchResults.results}
+                onImageClick={onImageClick}
+              />
+            </div>
+          ) : searchResults.temporalMode === 'tuple' ? (
+            <div>
+              <TemporalTupleResults 
+                tuples={searchResults.results}
+                onImageClick={onImageClick}
+              />
+            </div>
+          ) : viewMode === 'M' && searchResults.allMethods ? (
+            /* Mode M: Show separate sections for each method */
             <div className="space-y-8">
               {Object.entries(searchResults.allMethods).map(([methodName, methodResults]) => {
                 if (!methodResults || methodResults.length === 0) return null

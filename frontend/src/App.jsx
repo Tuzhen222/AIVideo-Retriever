@@ -19,6 +19,8 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [mediaIndex, setMediaIndex] = useState(null)
   const [fpsMapping, setFpsMapping] = useState(null)
+  const [temporalMode, setTemporalMode] = useState('id')  // 'id' or 'tuple'
+  const [isMultiStage, setIsMultiStage] = useState(false)
   const sidebarRef = useRef(null)
 
   // Load search config on mount
@@ -51,14 +53,62 @@ function App() {
     loadData()
   }, [])
 
+  // Re-extract results when viewMode, selectedQ, or selectedStage changes
+  useEffect(() => {
+    if (fullResponse && hasSearched) {
+      console.log('[App] Re-extracting results due to viewMode/Q/Stage change')
+      const transformedResults = extractResultsForDisplay(fullResponse, selectedQ, viewMode, selectedStage, temporalMode)
+      setSearchResults(transformedResults)
+    }
+  }, [viewMode, selectedQ, selectedStage, temporalMode])
+
   const handleImageClick = (result) => {
+    console.log('[App.handleImageClick] Clicked result:', result)
     setSelectedResult(result)
     setIsModalOpen(true)
+    console.log('[App.handleImageClick] Modal should open now')
   }
 
   const handleCloseModal = () => {
     setIsModalOpen(false)
     setSelectedResult(null)
+  }
+
+  const handleTemporalModeChange = async (newMode) => {
+    console.log('[App] Temporal mode changed to:', newMode)
+    setTemporalMode(newMode)
+    
+    // Re-fetch search with new temporal mode if multistage
+    if (isMultiStage && sidebarRef.current && hasSearched) {
+      console.log('[App] Re-fetching with new temporal mode:', newMode)
+      const querySections = sidebarRef.current.getQuerySections()
+      
+      setIsSearching(true)
+      try {
+        const stages = querySections.map((sec, index) => ({
+          stage_id: index + 1,
+          stage_name: `Stage ${index + 1}`,
+          query: sec.query || "",
+          ocr_text: sec.ocrText || "",
+          toggles: sec.toggles || {},
+          selected_objects: sec.selectedObjects || []
+        }))
+
+        const response = await api.searchMultistage(stages, {
+          top_k: null,
+          mode: viewMode,
+          temporal_mode: newMode
+        })
+
+        setFullResponse(response)
+        const transformedResults = extractResultsForDisplay(response, selectedQ, viewMode, selectedStage, newMode)
+        setSearchResults(transformedResults)
+      } catch (err) {
+        console.error('[App] Error re-fetching with new temporal mode:', err)
+      } finally {
+        setIsSearching(false)
+      }
+    }
   }
 
   const handleClear = () => {
@@ -67,6 +117,9 @@ function App() {
     setFullResponse(null)
     setSelectedQ('Q0')
     setSearchError(null)
+    setTemporalMode('id')  // Reset to ID mode
+    setIsMultiStage(false)
+    setSelectedStage(1)
     if (sidebarRef.current) {
       sidebarRef.current.reset()
       setQuerySectionsCount(1)
@@ -81,12 +134,48 @@ function App() {
   }
 
   // Extract results for display based on selectedQ and viewMode
-  const extractResultsForDisplay = (response, selectedQ, viewMode, selectedStage = 1) => {
+  const extractResultsForDisplay = (response, selectedQ, viewMode, selectedStage = 1, temporalMode = 'id') => {
     if (!response) return null
 
     // Check if this is a multistage response
     if (response.stages && Array.isArray(response.stages)) {
-      // Multistage response format
+      // Check if viewing temporal aggregation (Temporal Result stage)
+      if (response.temporal_aggregation && selectedStage === 'temporal') {
+        console.log('[DEBUG TEMPORAL] Viewing temporal aggregation:', temporalMode)
+        
+        const tempAgg = response.temporal_aggregation
+        
+        if (temporalMode === 'id' && tempAgg.mode === 'id') {
+          // ID aggregation mode
+          return {
+            results: tempAgg.results || [],
+            query: 'Temporal Aggregation (ID Mode)',
+            method: 'temporal_id',
+            total: tempAgg.total || 0,
+            temporalMode: 'id'
+          }
+        } else if (temporalMode === 'tuple' && tempAgg.mode === 'tuple') {
+          // Tuple mode
+          return {
+            results: tempAgg.tuples || [],
+            query: 'Temporal Aggregation (Tuple Mode)',
+            method: 'temporal_tuple',
+            total: tempAgg.total || 0,
+            temporalMode: 'tuple'
+          }
+        }
+        
+        // Fallback if mode mismatch - re-fetch needed
+        return {
+          results: [],
+          query: 'Temporal Aggregation',
+          method: 'temporal',
+          total: 0,
+          temporalMode: temporalMode
+        }
+      }
+      
+      // Regular stage view
       const stage = response.stages.find(s => s.stage_id === selectedStage) || response.stages[0]
       
       if (!stage) {
@@ -104,14 +193,13 @@ function App() {
       const queryKey = queryMap[selectedQ] || 'query_0'
       const queryText = stage[queryKey] || stage.query_original
 
-      console.log(`[DEBUG MULTISTAGE] Stage ${selectedStage}, ${selectedQ} => ${queryText}`)
+      console.log(`[DEBUG MULTISTAGE] Stage ${selectedStage}, ViewMode=${viewMode}, Q=${selectedQ}, Query="${queryText}"`)
 
-      // For multistage, results are already ensembled per stage
-      // Mode E: Show stage ensemble results
+      // Mode E: Show ensemble results (Q0+Q1+Q2 combined) - ignore Q button
       if (viewMode === 'E') {
         return {
           results: stage.results || [],
-          query: queryText,
+          query: stage.query_original || stage.query_0,
           method: (stage.enabled_methods || []).join('+'),
           total: stage.total || 0,
           stageInfo: {
@@ -122,14 +210,40 @@ function App() {
         }
       }
 
-      // Mode A: Show per-method results for stage
-      if (viewMode === 'A' && stage.per_method_results) {
+      // Mode A: Show ensemble for selected Q (Q0/Q1/Q2), with Q button active
+      if (viewMode === 'A') {
+        // Use individual query results based on selectedQ
+        let queryResults = stage.results || []  // Fallback to ensemble
+        
+        if (selectedQ === 'Q0' && stage.q0_results) {
+          queryResults = stage.q0_results
+        } else if (selectedQ === 'Q1' && stage.q1_results) {
+          queryResults = stage.q1_results
+        } else if (selectedQ === 'Q2' && stage.q2_results) {
+          queryResults = stage.q2_results
+        }
+        
         return {
-          results: stage.results || [],
+          results: queryResults,
           query: queryText,
           method: (stage.enabled_methods || []).join('+'),
-          total: stage.total || 0,
-          allMethods: stage.per_method_results,
+          total: queryResults.length,
+          stageInfo: {
+            stage_id: stage.stage_id,
+            stage_name: stage.stage_name,
+            enabled_methods: stage.enabled_methods
+          }
+        }
+      }
+
+      // Mode M: Show per-method results for selected Q
+      if (viewMode === 'M' && stage.per_method_results) {
+        return {
+          results: [],  // No single grid in mode M
+          query: queryText,
+          method: (stage.enabled_methods || []).join('+'),
+          total: 0,
+          allMethods: stage.per_method_results,  // Show separate sections per method
           stageInfo: {
             stage_id: stage.stage_id,
             stage_name: stage.stage_name,
@@ -323,9 +437,12 @@ function App() {
 
         console.log('[DEBUG] Multistage stages:', stages)
 
+        setIsMultiStage(true)
+
         response = await api.searchMultistage(stages, {
           top_k: null,
-          mode: viewMode  // E = ensemble only, A = all methods
+          mode: viewMode,  // E = ensemble only, A = all methods
+          temporal_mode: querySections.length > 1 ? temporalMode : null  // Only use temporal for multistage
         })
 
         console.log('[DEBUG] Multistage backend response:', response)
@@ -379,13 +496,13 @@ function App() {
     }
   }
 
-  // Update display when selectedQ changes
+  // Update display when selectedQ, viewMode, selectedStage, or temporalMode changes
   useEffect(() => {
     if (fullResponse) {
-      const transformedResults = extractResultsForDisplay(fullResponse, selectedQ, viewMode, selectedStage)
+      const transformedResults = extractResultsForDisplay(fullResponse, selectedQ, viewMode, selectedStage, temporalMode)
       setSearchResults(transformedResults)
     }
-  }, [selectedQ, viewMode, fullResponse, selectedStage])
+  }, [selectedQ, viewMode, fullResponse, selectedStage, temporalMode])
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-gray-50">
@@ -401,6 +518,8 @@ function App() {
         onQChange={setSelectedQ}
         selectedStage={selectedStage}
         onStageChange={setSelectedStage}
+        temporalMode={temporalMode}
+        onTemporalModeChange={handleTemporalModeChange}
       />
 
       <Sidebar

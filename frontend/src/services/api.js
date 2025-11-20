@@ -134,7 +134,7 @@ class ApiService {
   /**
    * Multi-stage search with independent query sections
    * @param {Array} stages - Array of stage objects with query, toggles, selected_objects
-   * @param {Object} options - Search options (top_k, mode)
+   * @param {Object} options - Search options (top_k, mode, temporal_mode)
    */
   async searchMultistage(stages, options = {}) {
     return this.request('/api/search/multistage', {
@@ -149,7 +149,8 @@ class ApiService {
           selected_objects: stage.selected_objects || []
         })),
         top_k: options.top_k || null,
-        mode: options.mode || 'E'
+        mode: options.mode || 'E',
+        temporal_mode: options.temporal_mode || null  // 'tuple' or 'id'
       })
     })
   }

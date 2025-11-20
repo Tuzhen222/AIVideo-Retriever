@@ -4,11 +4,13 @@ import SearchButton from '../components/SearchButton'
 import StageButtons from '../components/StageButtons'
 import ViewControls from '../components/ViewControls'
 import QButtons from '../components/QButtons'
+import TemporalToggle from '../components/TemporalToggle'
 
-function Header({ onSearch, onClear, hasSearched, querySectionsCount, viewMode, onViewModeChange, isSearching = false, selectedQ: parentSelectedQ, onQChange, selectedStage: parentSelectedStage, onStageChange }) {
+function Header({ onSearch, onClear, hasSearched, querySectionsCount, viewMode, onViewModeChange, isSearching = false, selectedQ: parentSelectedQ, onQChange, selectedStage: parentSelectedStage, onStageChange, temporalMode: parentTemporalMode, onTemporalModeChange }) {
   const [selectedQ, setSelectedQ] = useState(parentSelectedQ || 'Q0')
   const [selectedStage, setSelectedStage] = useState(parentSelectedStage || 1)
   const [selectedTemporal, setSelectedTemporal] = useState(false)
+  const [temporalMode, setTemporalMode] = useState(parentTemporalMode || 'id')
   
   // Sync with parent selectedQ
   useEffect(() => {
@@ -23,6 +25,13 @@ function Header({ onSearch, onClear, hasSearched, querySectionsCount, viewMode, 
       setSelectedStage(parentSelectedStage)
     }
   }, [parentSelectedStage])
+
+  // Sync with parent temporalMode
+  useEffect(() => {
+    if (parentTemporalMode !== undefined) {
+      setTemporalMode(parentTemporalMode)
+    }
+  }, [parentTemporalMode])
   const handleClear = () => {
     // Clear logic sẽ được thêm sau
     console.log('Clear clicked')
@@ -57,8 +66,11 @@ function Header({ onSearch, onClear, hasSearched, querySectionsCount, viewMode, 
     // Temporal Result logic sẽ được thêm sau
     console.log('Temporal Result clicked')
     setSelectedTemporal(true)
-    setSelectedStage(null)
+    setSelectedStage('temporal')  // Set to 'temporal' string
     setSelectedQ('Q0') // Reset về Q0 khi click Temporal Result
+    if (onStageChange) {
+      onStageChange('temporal')  // Notify parent with 'temporal'
+    }
   }
 
   const handleQClick = (q) => {
@@ -66,6 +78,15 @@ function Header({ onSearch, onClear, hasSearched, querySectionsCount, viewMode, 
     console.log(`${q} clicked`)
     if (onQChange) {
       onQChange(q)  // Notify parent
+    }
+  }
+
+  const handleTemporalToggle = () => {
+    const newMode = temporalMode === 'id' ? 'tuple' : 'id'
+    setTemporalMode(newMode)
+    console.log(`Temporal mode switched to: ${newMode}`)
+    if (onTemporalModeChange) {
+      onTemporalModeChange(newMode)
     }
   }
 
@@ -88,14 +109,25 @@ function Header({ onSearch, onClear, hasSearched, querySectionsCount, viewMode, 
           selectedTemporal={selectedTemporal}
         />
 
-        {/* Q Buttons - chỉ hiện khi mode A hoặc M */}
-        {(viewMode === 'A' || viewMode === 'M') && (
+        {/* Q Buttons - chỉ hiện khi mode A hoặc M và KHÔNG phải temporal stage */}
+        {(viewMode === 'A' || viewMode === 'M') && !selectedTemporal && (
           <QButtons onQClick={handleQClick} selectedQ={selectedQ} />
         )}
       </div>
 
       {/* Container bên phải - Controls */}
-      <ViewControls viewMode={viewMode} onViewModeChange={onViewModeChange} />
+      <div className="ml-auto flex items-center gap-2">
+        {/* Temporal toggle - only show when multistage search */}
+        {querySectionsCount > 1 && hasSearched && selectedTemporal && (
+          <TemporalToggle 
+            isActive={temporalMode === 'tuple'}
+            onClick={handleTemporalToggle}
+            disabled={isSearching}
+          />
+        )}
+        
+        <ViewControls viewMode={viewMode} onViewModeChange={onViewModeChange} />
+      </div>
     </div>
   )
 }

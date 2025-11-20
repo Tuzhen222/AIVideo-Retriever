@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 class VietnameseTranslator:
     """Utility to detect and translate Vietnamese text to English"""
     
-    # Vietnamese character pattern
     VIETNAMESE_PATTERN = re.compile(r'[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]', re.IGNORECASE)
     
     def __init__(self):
@@ -21,14 +20,9 @@ class VietnameseTranslator:
         return bool(self.VIETNAMESE_PATTERN.search(text))
     
     def translate(self, text: str) -> str:
-        """
-        Translate Vietnamese text to English.
-        Returns original text if not Vietnamese or translation fails.
-        """
         if not text or not text.strip():
             return text
         
-        # Check if Vietnamese
         if not self.is_vietnamese(text):
             logger.info(f"[TRANSLATE] Text is not Vietnamese, skip: '{text}'")
             return text
@@ -42,7 +36,6 @@ class VietnameseTranslator:
             return text
 
 
-# Singleton instance
 _translator_instance = None
 
 

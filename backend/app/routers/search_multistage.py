@@ -16,6 +16,7 @@ from app.services.method.object_filter import ObjectFilterSearch
 from app.utils.scale import ScoreScaler
 from app.utils.translator import get_translator
 from app.services.gemini.query_augmentation import get_query_augmentor
+from app.utils.temporal_aggregation import aggregate_by_id, find_temporal_tuples
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -39,6 +40,7 @@ class MultiStageSearchRequest(BaseModel):
     stages: List[StageQuerySection]
     top_k: Optional[int] = None
     mode: Optional[str] = "E"  # E = ensemble only, A = all methods
+    temporal_mode: Optional[str] = None  # "tuple" or "id" for temporal aggregation
 
 
 class StageSearchResult(BaseModel):
@@ -49,16 +51,21 @@ class StageSearchResult(BaseModel):
     query_0: str  # Q0 = original (or translated)
     query_1: str  # Q1 = augmented 1
     query_2: str  # Q2 = augmented 2
-    results: List[Dict[str, Any]]
+    results: List[Dict[str, Any]]  # Ensemble of Q0+Q1+Q2 (for mode E)
     total: int
     enabled_methods: List[str]
-    per_method_results: Optional[Dict[str, List[Dict[str, Any]]]] = None
+    per_method_results: Optional[Dict[str, List[Dict[str, Any]]]] = None  # For mode M
+    # For mode A: separate results per query
+    q0_results: Optional[List[Dict[str, Any]]] = None
+    q1_results: Optional[List[Dict[str, Any]]] = None
+    q2_results: Optional[List[Dict[str, Any]]] = None
 
 
 class MultiStageSearchResponse(BaseModel):
     """Response with results from all stages"""
     stages: List[StageSearchResult]
     total_stages: int
+    temporal_aggregation: Optional[Dict[str, Any]] = None  # Temporal aggregated results
 
 
 def _ensemble_multimodal_results(clip_res, beit3_res, bigg_res, top_k):
@@ -292,14 +299,33 @@ async def _process_single_stage(stage: StageQuerySection, top_k: int, mode: str,
     if stage.selected_objects and len(stage.selected_objects) > 0:
         logger.info(f"[MULTISTAGE] Stage {stage.stage_id} applying object filter: {stage.selected_objects}")
         obj_filter = ObjectFilterSearch()
+        
+        # Filter ensemble results
         original_ids = [str(r["id"]) for r in stage_results]
         filtered_ids = obj_filter.filter(original_ids, stage.selected_objects)
         stage_results = [r for r in stage_results if str(r["id"]) in filtered_ids]
-        logger.info(f"[MULTISTAGE] Stage {stage.stage_id} after object filter: {len(stage_results)} results")
+        
+        # Also filter individual query results for mode A
+        if mode == "A" or mode == "M":
+            q0_filtered = [r for r in q0_results if str(r["id"]) in filtered_ids]
+            q1_filtered = [r for r in q1_results if str(r["id"]) in filtered_ids]
+            q2_filtered = [r for r in q2_results if str(r["id"]) in filtered_ids]
+        else:
+            q0_filtered = q1_filtered = q2_filtered = None
+            
+        logger.info(f"[MULTISTAGE] Stage {stage.stage_id} after object filter: {len(stage_results)} ensemble results")
+    else:
+        # No object filter
+        if mode == "A" or mode == "M":
+            q0_filtered = q0_results[:top_k]
+            q1_filtered = q1_results[:top_k]
+            q2_filtered = q2_results[:top_k]
+        else:
+            q0_filtered = q1_filtered = q2_filtered = None
     
-    # Prepare per-method results (only Q0 for simplicity in mode A)
+    # Prepare per-method results (only Q0 for simplicity in mode M)
     stage_per_method = None
-    if mode == "A":
+    if mode == "M":
         stage_per_method = q0_per_method
     
     return StageSearchResult(
@@ -312,7 +338,10 @@ async def _process_single_stage(stage: StageQuerySection, top_k: int, mode: str,
         results=stage_results,
         total=len(stage_results),
         enabled_methods=list(enabled_methods),
-        per_method_results=stage_per_method
+        per_method_results=stage_per_method,
+        q0_results=q0_filtered,
+        q1_results=q1_filtered,
+        q2_results=q2_filtered
     )
 
 
@@ -354,6 +383,33 @@ async def search_multistage(request: MultiStageSearchRequest):
         duration_ms = (time.time() - start_time) * 1000
         logger.info(f"[MULTISTAGE] Completed {len(stage_results)} stages in {duration_ms:.2f}ms")
         
+        # Temporal aggregation if requested
+        temporal_aggregation = None
+        if request.temporal_mode in ["tuple", "id"]:
+            logger.info(f"[MULTISTAGE] Performing temporal aggregation mode: {request.temporal_mode}")
+            
+            # Extract ensemble_of_ensemble results from each stage (Q3 results)
+            # For now, use the final stage results as proxy for ensemble_of_ensemble
+            stage_result_lists = [stage.results for stage in stage_results]
+            
+            if request.temporal_mode == "id":
+                aggregated_results = aggregate_by_id(stage_result_lists)
+                temporal_aggregation = {
+                    "mode": "id",
+                    "results": aggregated_results[:top_k],  # Limit to top_k
+                    "total": len(aggregated_results)
+                }
+                logger.info(f"[MULTISTAGE] ID aggregation: {len(aggregated_results)} unique ids")
+            
+            elif request.temporal_mode == "tuple":
+                tuples = find_temporal_tuples(stage_result_lists, max_tuples=top_k)
+                temporal_aggregation = {
+                    "mode": "tuple",
+                    "tuples": tuples,
+                    "total": len(tuples)
+                }
+                logger.info(f"[MULTISTAGE] Tuple mode: {len(tuples)} valid tuples")
+        
         # Log for monitoring
         log_search_query(
             query=f"multistage_{len(request.stages)}_stages",
@@ -366,7 +422,8 @@ async def search_multistage(request: MultiStageSearchRequest):
         
         return MultiStageSearchResponse(
             stages=stage_results,
-            total_stages=len(stage_results)
+            total_stages=len(stage_results),
+            temporal_aggregation=temporal_aggregation
         )
     
     except HTTPException:
