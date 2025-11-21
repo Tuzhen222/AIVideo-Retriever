@@ -1,11 +1,12 @@
 import React from 'react'
 import ImageSearchButton from './ImageSearchButton'
+import SaveAnswerButton from './SaveAnswerButton'
 
 /**
  * Render temporal ID aggregation mode results
  * Simple grid view like normal stage results
  */
-function TemporalIDResults({ results, onImageClick, onImageSearch }) {
+function TemporalIDResults({ results, onImageClick, onImageSearch, onSaveAnswer }) {
   if (!results || results.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
@@ -36,6 +37,9 @@ function TemporalIDResults({ results, onImageClick, onImageSearch }) {
               />
               {onImageSearch && (
                 <ImageSearchButton result={result} onImageSearch={onImageSearch} />
+              )}
+              {onSaveAnswer && (
+                <SaveAnswerButton result={result} onSave={onSaveAnswer} />
               )}
             </div>
           )}

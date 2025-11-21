@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 
-function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping }) {
+function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping, onSaveAnswer = null }) {
   const [videoId, setVideoId] = useState(null)
   const [videoFolder, setVideoFolder] = useState(null)
   const [frameIdx, setFrameIdx] = useState(null)
@@ -135,12 +135,32 @@ function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping }) {
         {/* Header */}
         <div className="flex justify-between items-center p-3 sm:p-4 border-b">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Video Details</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-xl sm:text-2xl font-bold leading-none"
-          >
-            ×
-          </button>
+          <div className="flex items-center gap-2">
+            {onSaveAnswer && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (onSaveAnswer) {
+                    onSaveAnswer(result)
+                    onClose()
+                  }
+                }}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2"
+                title="Save as Answer"
+              >
+                <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+                <span>Save as Answer</span>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 text-xl sm:text-2xl font-bold leading-none"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         {/* Content */}

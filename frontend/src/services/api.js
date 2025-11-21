@@ -186,6 +186,53 @@ class ApiService {
       headers: {}  // Let browser set Content-Type for FormData
     })
   }
+
+  /**
+   * Chatbox API methods
+   */
+
+  /**
+   * Submit a new answer
+   * @param {Object} submissionData - Submission data
+   */
+  async submitAnswer(submissionData) {
+    return this.request('/api/chatbox/submit', {
+      method: 'POST',
+      body: JSON.stringify(submissionData)
+    })
+  }
+
+  /**
+   * Fetch submissions
+   * @param {Object} params - Query parameters
+   */
+  async fetchSubmissions(params = {}) {
+    const queryParams = new URLSearchParams()
+    if (params.query_text) queryParams.append('query_text', params.query_text)
+    if (params.username) queryParams.append('username', params.username)
+    if (params.limit) queryParams.append('limit', params.limit)
+    if (params.offset) queryParams.append('offset', params.offset)
+
+    const queryString = queryParams.toString()
+    return this.request(`/api/chatbox/fetch${queryString ? '?' + queryString : ''}`)
+  }
+
+  /**
+   * Get unique queries
+   */
+  async getUniqueQueries() {
+    return this.request('/api/chatbox/queries')
+  }
+
+  /**
+   * Delete a submission
+   * @param {number} submissionId - ID of submission to delete
+   */
+  async deleteSubmission(submissionId) {
+    return this.request(`/api/chatbox/submissions/${submissionId}`, {
+      method: 'DELETE'
+    })
+  }
 }
 
 // Export singleton instance

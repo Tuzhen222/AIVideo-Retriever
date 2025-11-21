@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     BASE_DIR: str = ""  # Will be set to backend root directory
     
     # Model Server URL (for CLIP/BEiT3/BiGG embeddings)
-    MODEL_SERVER_URL: str = "http://localhost:7000"
+    MODEL_SERVER_URL: str = "https://privative-startingly-justa.ngrok-free.dev/"
     
     # Search settings
     DEFAULT_TOP_K: int = 200
@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     COHERE_API_KEYS: Optional[List[str]] = None
     # Embedding Server URL (for remote embedding API)
     EMBEDDING_SERVER_MULTIMODAL: Optional[str] = None
-    GEMINI_API_KEYS: Optional[List[str]] = None
+    GEMINI_API_KEYS: Optional[List[str]] = "AIzaSyCz7cbiDs-pvTGXxDuwOJzUnuybyNU7AiE", "AIzaSyB1OtAS0xvRIMAhcTCk11i_aG6DKKjvxF4"
     # Elasticsearch settings (if used)
     ELASTICSEARCH_HOST: Optional[str] = None
     ELASTICSEARCH_PORT: int = 9200
@@ -74,6 +74,11 @@ class Settings(BaseSettings):
     
     # Logging
     LOG_DIR: str = "logs"  # Directory for log files
+    
+    # Chatbox settings
+    CHATBOX_DB_PATH: str = "logs/chatbox.db"  # Store in logs directory (has write permission)
+    CHATBOX_ENABLED: bool = True
+    CHATBOX_MAX_LIMIT: int = 200  # Max limit for fetch
     
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

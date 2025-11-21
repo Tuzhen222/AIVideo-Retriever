@@ -20,8 +20,8 @@ services:
     volumes:
       # Mount code for hot-reload
       - ./backend/app:/app/app
-      # Mount data (read-only)
-      - ./backend/app/data:/app/app/data:ro
+      # Mount data (read-only for keyframes/index, but need write for chatbox.db)
+      - ./backend/app/data:/app/app/data
       # Mount logs
       - ./backend/logs:/app/logs
     networks:
@@ -32,6 +32,7 @@ services:
         condition: service_started
       elasticsearch:
         condition: service_healthy
+    entrypoint: [] 
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

@@ -38,9 +38,9 @@ COPY app/ ./app/
 # Copy .env file if exists (optional, will be overridden by docker-compose env_file)
 COPY .env* ./
 
-# Copy entrypoint script
+# Copy entrypoint script and fix line endings (CRLF to LF for Windows)
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
 # Expose port
 EXPOSE 8000

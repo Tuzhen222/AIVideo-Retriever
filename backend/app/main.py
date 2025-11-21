@@ -18,6 +18,16 @@ async def lifespan(app: FastAPI):
     app_logger.info("🚀 Starting FastAPI application...")
     app_logger.info(f"Log directory: logs/")
     app_logger.info(f"Search queries log: logs/search_queries.log")
+    
+    # Initialize chatbox database
+    if settings.CHATBOX_ENABLED:
+        try:
+            from app.database.db import init_database
+            init_database()
+        except Exception as e:
+            app_logger.error(f"❌ Failed to initialize chatbox database: {e}")
+            # Continue startup even if database init fails (optional feature)
+    
     yield
     # Shutdown
     app_logger.info("🛑 Shutting down FastAPI application...")
@@ -59,11 +69,15 @@ async def health_check():
     }
 
 
-from app.routers import search, search_augmented, search_multistage, search_image
+from app.routers import search, search_augmented, search_multistage, search_image, chatbox
 app.include_router(search.router, prefix="/api", tags=["utils"])
 app.include_router(search_augmented.router, prefix="/api", tags=["search"])
 app.include_router(search_multistage.router, prefix="/api", tags=["multistage"])
 app.include_router(search_image.router, prefix="/api", tags=["image-search"])
+
+# Chatbox router (only if enabled)
+if settings.CHATBOX_ENABLED:
+    app.include_router(chatbox.router, prefix="/api/chatbox", tags=["chatbox"])
 
 
 keyframe_dir = settings.KEYFRAME_DIR

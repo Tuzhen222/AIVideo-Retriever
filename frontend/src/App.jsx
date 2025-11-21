@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react'
 import Header from './layouts/Header'
 import Sidebar from './layouts/Sidebar'
 import MainContent from './layouts/MainContent'
+import ChatboxIcon from './components/Chatbox/ChatboxIcon'
+import ChatboxPanel from './components/Chatbox/ChatboxPanel'
 import api from './services/api'
 
 function App() {
@@ -24,6 +26,11 @@ function App() {
   const [imageSearchActive, setImageSearchActive] = useState(false)  // Image search mode
   const [imageSearchImage, setImageSearchImage] = useState(null)  // Source image for search
   const sidebarRef = useRef(null)
+  
+  // Chatbox state
+  const [isChatboxOpen, setIsChatboxOpen] = useState(false)
+  const [chatboxKeyframe, setChatboxKeyframe] = useState(null)  // Selected keyframe for submit
+  const [chatboxQuery, setChatboxQuery] = useState('')  // Current query text for submit
 
   // Load search config on mount
   useEffect(() => {
@@ -128,6 +135,45 @@ function App() {
     setSelectedResult(null)
   }
 
+  // Chatbox handlers
+  const handleOpenChatbox = () => {
+    setIsChatboxOpen(true)
+    // Get current query from sidebar if available
+    if (sidebarRef.current) {
+      const querySections = sidebarRef.current.getQuerySections()
+      if (querySections && querySections.length > 0) {
+        const firstQuery = querySections[0]?.query || ''
+        setChatboxQuery(firstQuery)
+      }
+    }
+  }
+
+  const handleCloseChatbox = () => {
+    setIsChatboxOpen(false)
+    setChatboxKeyframe(null)
+  }
+
+  const handleClearKeyframe = () => {
+    setChatboxKeyframe(null)
+  }
+
+  const handleSaveAnswer = (result) => {
+    // Set keyframe for submit form
+    setChatboxKeyframe(result)
+    // Get current query from searchResults if available, otherwise from sidebar
+    if (searchResults && searchResults.query) {
+      setChatboxQuery(searchResults.query)
+    } else if (sidebarRef.current) {
+      const querySections = sidebarRef.current.getQuerySections()
+      if (querySections && querySections.length > 0) {
+        const firstQuery = querySections[0]?.query || ''
+        setChatboxQuery(firstQuery)
+      }
+    }
+    // Open chatbox (will auto-switch to submit tab if currentKeyframe is set)
+    setIsChatboxOpen(true)
+  }
+
   const handleTemporalModeChange = async (newMode) => {
     console.log('[App] Temporal mode changed to:', newMode)
     setTemporalMode(newMode)
@@ -218,11 +264,20 @@ function App() {
         
         const tempAgg = response.temporal_aggregation
         
+        // Merge queries from all stages
+        const mergedQuery = response.stages
+          .map((stage, idx) => {
+            const stageQuery = stage.query_original || stage.query_0 || ''
+            return stageQuery.trim()
+          })
+          .filter(q => q.length > 0)
+          .join(' + ')
+        
         if (temporalMode === 'id' && tempAgg.mode === 'id') {
           // ID aggregation mode
           return {
             results: tempAgg.results || [],
-            query: 'Temporal Aggregation (ID Mode)',
+            query: mergedQuery || 'Temporal Aggregation (ID Mode)',
             method: 'temporal_id',
             total: tempAgg.total || 0,
             temporalMode: 'id'
@@ -231,7 +286,7 @@ function App() {
           // Tuple mode
           return {
             results: tempAgg.tuples || [],
-            query: 'Temporal Aggregation (Tuple Mode)',
+            query: mergedQuery || 'Temporal Aggregation (Tuple Mode)',
             method: 'temporal_tuple',
             total: tempAgg.total || 0,
             temporalMode: 'tuple'
@@ -571,7 +626,9 @@ function App() {
       
       // Extract results based on current selectedQ and viewMode
       const transformedResults = extractResultsForDisplay(response, selectedQ, viewMode, selectedStage)
+      console.log('[DEBUG] Backend response total:', response.total, 'results length:', response.results?.length)
       console.log('[DEBUG] Transformed results for display:', transformedResults)
+      console.log('[DEBUG] Transformed results count:', transformedResults?.results?.length, 'total:', transformedResults?.total)
       setSearchResults(transformedResults)
     } catch (err) {
       console.error("Search error:", err)
@@ -620,8 +677,24 @@ function App() {
           fpsMapping={fpsMapping}
           viewMode={viewMode}
           onImageSearch={handleImageSearch}
+          onSaveAnswer={handleSaveAnswer}
         />
       </div>
+
+      {/* Chatbox */}
+      <ChatboxIcon 
+        onClick={handleOpenChatbox}
+        unreadCount={0}
+      />
+      <ChatboxPanel
+        isOpen={isChatboxOpen}
+        onClose={handleCloseChatbox}
+        currentQuery={chatboxQuery}
+        currentKeyframe={chatboxKeyframe}
+        onKeyframeClick={handleImageClick}
+        username="user1"
+        onClearKeyframe={handleClearKeyframe}
+      />
     </div>
   )
 }

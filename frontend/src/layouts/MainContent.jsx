@@ -3,9 +3,10 @@ import VideoModal from '../components/VideoModal'
 import TemporalIDResults from '../components/TemporalIDResults'
 import TemporalTupleResults from '../components/TemporalTupleResults'
 import ImageSearchButton from '../components/ImageSearchButton'
+import SaveAnswerButton from '../components/SaveAnswerButton'
 import api from '../services/api'
 
-function MainContent({ searchResults, isSearching = false, searchError = null, onImageClick = null, selectedResult = null, isModalOpen = false, onCloseModal = null, mediaIndex = null, fpsMapping = null, viewMode = 'E', onImageSearch = null }) {
+function MainContent({ searchResults, isSearching = false, searchError = null, onImageClick = null, selectedResult = null, isModalOpen = false, onCloseModal = null, mediaIndex = null, fpsMapping = null, viewMode = 'E', onImageSearch = null, onSaveAnswer = null, currentQuery = '' }) {
   return (
     <div className="fixed top-6 left-0 md:left-52 right-0 bottom-0 bg-white overflow-y-auto">
       <div className="relative w-full h-full">
@@ -49,19 +50,34 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
           {/* Temporal results rendering */}
           {searchResults.temporalMode === 'id' ? (
             <div>
-
+              {searchResults.query && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm font-medium text-blue-900">
+                    <span className="font-semibold">Query:</span> {searchResults.query}
+                  </p>
+                </div>
+              )}
               <TemporalIDResults 
                 results={searchResults.results}
                 onImageClick={onImageClick}
                 onImageSearch={onImageSearch}
+                onSaveAnswer={onSaveAnswer}
               />
             </div>
           ) : searchResults.temporalMode === 'tuple' ? (
             <div>
+              {searchResults.query && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm font-medium text-blue-900">
+                    <span className="font-semibold">Query:</span> {searchResults.query}
+                  </p>
+                </div>
+              )}
               <TemporalTupleResults 
                 tuples={searchResults.results}
                 onImageClick={onImageClick}
                 onImageSearch={onImageSearch}
+                onSaveAnswer={onSaveAnswer}
               />
             </div>
           ) : viewMode === 'M' && searchResults.allMethods ? (
@@ -101,6 +117,9 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
                               {onImageSearch && (
                                 <ImageSearchButton result={result} onImageSearch={onImageSearch} />
                               )}
+                              {onSaveAnswer && (
+                                <SaveAnswerButton result={result} onSave={onSaveAnswer} />
+                              )}
                             </div>
                           )}
                         </div>
@@ -135,6 +154,9 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
                       {onImageSearch && (
                         <ImageSearchButton result={result} onImageSearch={onImageSearch} />
                       )}
+                      {onSaveAnswer && (
+                        <SaveAnswerButton result={result} onSave={onSaveAnswer} />
+                      )}
                     </div>
                   )}
                 </div>
@@ -165,6 +187,7 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
         onClose={onCloseModal}
         mediaIndex={mediaIndex}
         fpsMapping={fpsMapping}
+        onSaveAnswer={onSaveAnswer}
       />
       </div>
     </div>
