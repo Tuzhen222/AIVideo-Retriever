@@ -1,50 +1,45 @@
+# Data directories (keep locally, don't push)
+backend/app/data/
+!backend/app/data/.gitkeep
+
+preprocessing/
+!preprocessing/.gitkeep
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
-.build/
-.eggs/
-.python-version
-.venv/
-venv/
+*.so
+.Python
 env/
+venv/
 ENV/
-.venv*/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.ipynb_checkpoints/
-*.egg-info/
-.dist-info/
-
-# Node / Frontend
-node_modules/
-.next/
-.nuxt/
-.turbo/
-.pnpm-store/
-.yarn/
-.parcel-cache/
-.vite/
-coverage/
-dist/
 build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Environment & secrets
-.env
-.env.*
-*.env
-*.env.*
-
-# OS / Editor / Misc
-.DS_Store
-.idea/
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
 *.log
-
-# Docker / Compose
-**/docker/volumes/
-**/tmp/
-
-# Keep uv.lock tracked (do NOT ignore)
-!uv.lock
