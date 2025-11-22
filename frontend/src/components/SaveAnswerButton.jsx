@@ -11,7 +11,7 @@ function SaveAnswerButton({ result, onSave }) {
   return (
     <button
       onClick={handleClick}
-      className="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+      className="absolute bottom-1 right-1 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
       title="Save as Answer"
       aria-label="Save as Answer"
     >
