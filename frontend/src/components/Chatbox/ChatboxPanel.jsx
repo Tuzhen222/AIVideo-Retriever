@@ -10,7 +10,8 @@ function ChatboxPanel({
   currentKeyframe = null,
   onKeyframeClick,
   username = 'user1',
-  onClearKeyframe = null
+  onClearKeyframe = null,
+  onOpenDresModal = null
 }) {
   const [activeTab, setActiveTab] = useState('view') // 'view' or 'submit'
   const [submissions, setSubmissions] = useState([])
@@ -204,6 +205,7 @@ function ChatboxPanel({
             onSubmit={handleSubmit}
             onCancel={() => setActiveTab('view')}
             username={username}
+            onOpenDresModal={onOpenDresModal}
           />
         )}
       </div>

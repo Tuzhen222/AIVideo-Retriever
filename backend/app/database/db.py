@@ -1,9 +1,9 @@
 """
-Database connection and initialization for SQLite
+Database connection and initialization for PostgreSQL
 """
-import sqlite3
+import psycopg2
+import psycopg2.extras
 import logging
-from pathlib import Path
 from typing import Optional
 from contextlib import contextmanager
 
@@ -12,32 +12,32 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
-def get_db_path() -> Path:
-    """Get database file path"""
-    db_path = Path(settings.BASE_DIR) / settings.CHATBOX_DB_PATH
-    # Create parent directory if it doesn't exist
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    return db_path
+def get_connection_string() -> str:
+    """Get PostgreSQL connection string"""
+    return (
+        f"host={settings.POSTGRES_HOST} "
+        f"port={settings.POSTGRES_PORT} "
+        f"dbname={settings.POSTGRES_DB} "
+        f"user={settings.POSTGRES_USER} "
+        f"password={settings.POSTGRES_PASSWORD}"
+    )
 
 
 @contextmanager
 def get_connection():
     """
-    Get SQLite database connection with WAL mode enabled
+    Get PostgreSQL database connection
     Context manager ensures connection is properly closed
     """
-    db_path = get_db_path()
     conn = None
     try:
-        conn = sqlite3.connect(str(db_path), timeout=30.0)
-        # Enable WAL mode for better concurrent access
-        conn.execute("PRAGMA journal_mode=WAL")
-        # Enable foreign keys (if needed in future)
-        conn.execute("PRAGMA foreign_keys=ON")
-        conn.row_factory = sqlite3.Row  # Return rows as dict-like objects
+        conn = psycopg2.connect(
+            get_connection_string(),
+            cursor_factory=psycopg2.extras.RealDictCursor  # Return rows as dict-like objects
+        )
         yield conn
         conn.commit()
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         if conn:
             conn.rollback()
         logger.error(f"Database error: {e}")
@@ -52,8 +52,7 @@ def init_database():
     Initialize database and create tables if they don't exist
     Called on application startup
     """
-    db_path = get_db_path()
-    logger.info(f"Initializing chatbox database at: {db_path}")
+    logger.info(f"Initializing chatbox database at: {settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}")
     
     try:
         with get_connection() as conn:
@@ -62,7 +61,7 @@ def init_database():
             # Create query_submissions table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS query_submissions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id SERIAL PRIMARY KEY,
                     query_text TEXT NOT NULL,
                     keyframe_path TEXT NOT NULL,
                     result_id TEXT NOT NULL,
@@ -92,11 +91,10 @@ def init_database():
             logger.info("✅ Chatbox database initialized successfully")
             
             # Log table info
-            cursor.execute("SELECT COUNT(*) FROM query_submissions")
-            count = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) as count FROM query_submissions")
+            count = cursor.fetchone()['count']
             logger.info(f"   Current submissions count: {count}")
             
-    except sqlite3.Error as e:
+    except psycopg2.Error as e:
         logger.error(f"❌ Failed to initialize database: {e}")
         raise
-

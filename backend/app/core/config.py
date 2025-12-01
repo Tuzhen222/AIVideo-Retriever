@@ -76,9 +76,18 @@ class Settings(BaseSettings):
     LOG_DIR: str = "logs"  # Directory for log files
     
     # Chatbox settings
-    CHATBOX_DB_PATH: str = "logs/chatbox.db"  # Store in logs directory (has write permission)
+    CHATBOX_DB_PATH: str = "logs/chatbox.db"  # Store in logs directory (has write permission) - DEPRECATED: Use PostgreSQL instead
     CHATBOX_ENABLED: bool = True
     CHATBOX_MAX_LIMIT: int = 200  # Max limit for fetch
+    
+    # PostgreSQL settings
+    POSTGRES_HOST: str = "localhost"
+    POSTGRES_PORT: int = 5432
+    POSTGRES_DB: str = "aivideo_chatbox"
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_POOL_SIZE: int = 5
+    POSTGRES_MAX_OVERFLOW: int = 10
     
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod

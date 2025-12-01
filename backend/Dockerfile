@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     curl \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv for faster dependency management
@@ -30,7 +31,8 @@ RUN uv pip install --system --no-cache \
     "elasticsearch>=8.0.0,<9.0.0" \
     "cohere>=5.0.0" \
     "deep-translator>=1.11.4" \
-    "google-generativeai>=0.3.0" 
+    "google-generativeai>=0.3.0" \
+    "psycopg2-binary>=2.9.9" 
 
 # Copy application code
 COPY app/ ./app/

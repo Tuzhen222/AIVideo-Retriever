@@ -1,12 +1,13 @@
 import React from 'react'
 import ImageSearchButton from './ImageSearchButton'
 import SaveAnswerButton from './SaveAnswerButton'
+import DresSubmitButton from './DresSubmitButton'
 
 /**
  * Render temporal tuple mode results
  * Shows grouped sequences of frames from different stages (same video, increasing frame indices)
  */
-function TemporalTupleResults({ tuples, onImageClick, onImageSearch, onSaveAnswer }) {
+function TemporalTupleResults({ tuples, onImageClick, onImageSearch, onSaveAnswer, onDresSubmitClick = null }) {
   if (!tuples || tuples.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
@@ -55,6 +56,9 @@ function TemporalTupleResults({ tuples, onImageClick, onImageSearch, onSaveAnswe
                         )}
                         {onSaveAnswer && (
                           <SaveAnswerButton result={result} onSave={onSaveAnswer} />
+                        )}
+                        {onDresSubmitClick && (
+                          <DresSubmitButton result={result} onSubmit={onDresSubmitClick} />
                         )}
                       </div>
                     )}

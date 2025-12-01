@@ -16,6 +16,11 @@ services:
       - QDRANT_HOST=qdrant  # Use service name in Docker network
       - ELASTICSEARCH_HOST=elasticsearch  # Use service name in Docker network
       - ELASTICSEARCH_PORT=9200
+      - POSTGRES_HOST=postgres  # Use service name in Docker network
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=aivideo_chatbox
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
       # All other values (DEFAULT_TOP_K, CLIP_WEIGHT, etc.) will be read from .env file
     volumes:
       # Mount code for hot-reload
@@ -31,6 +36,8 @@ services:
       qdrant:
         condition: service_started
       elasticsearch:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     entrypoint: [] 
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app
@@ -129,10 +136,33 @@ services:
       retries: 5
       start_period: 60s
 
+  postgres:
+    image: postgres:16-alpine
+    container_name: aivideo-postgres-dev
+    environment:
+      POSTGRES_DB: aivideo_chatbox
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - aivideo-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
 volumes:
   qdrant_storage_dev:
     driver: local
   elasticsearch_data_dev:
+    driver: local
+  postgres_data_dev:
     driver: local
 
 networks:

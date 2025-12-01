@@ -4,6 +4,7 @@ import Sidebar from './layouts/Sidebar'
 import MainContent from './layouts/MainContent'
 import ChatboxIcon from './components/Chatbox/ChatboxIcon'
 import ChatboxPanel from './components/Chatbox/ChatboxPanel'
+import DresSubmitModal from './components/DresSubmitModal'
 import api from './services/api'
 
 function App() {
@@ -31,6 +32,10 @@ function App() {
   const [isChatboxOpen, setIsChatboxOpen] = useState(false)
   const [chatboxKeyframe, setChatboxKeyframe] = useState(null)  // Selected keyframe for submit
   const [chatboxQuery, setChatboxQuery] = useState('')  // Current query text for submit
+
+  // DRES submit modal state
+  const [isDresModalOpen, setIsDresModalOpen] = useState(false)
+  const [dresInitialData, setDresInitialData] = useState(null)
 
   // Load search config on mount
   useEffect(() => {
@@ -209,6 +214,24 @@ function App() {
         setIsSearching(false)
       }
     }
+  }
+
+  const openDresModalFromResult = (result) => {
+    if (!result) return
+    setDresInitialData({
+      keyframe_path: result.keyframe_path || '',
+      query_text: searchResults?.query || chatboxQuery || ''
+    })
+    setIsDresModalOpen(true)
+  }
+
+  const openDresModalFromChatbox = (data) => {
+    if (!data) return
+    setDresInitialData({
+      keyframe_path: data.keyframe_path || '',
+      query_text: data.query_text || chatboxQuery || ''
+    })
+    setIsDresModalOpen(true)
   }
 
   const handleClear = () => {
@@ -678,6 +701,7 @@ function App() {
           viewMode={viewMode}
           onImageSearch={handleImageSearch}
           onSaveAnswer={handleSaveAnswer}
+          onDresSubmitClick={openDresModalFromResult}
         />
       </div>
 
@@ -694,6 +718,14 @@ function App() {
         onKeyframeClick={handleImageClick}
         username="user1"
         onClearKeyframe={handleClearKeyframe}
+        onOpenDresModal={openDresModalFromChatbox}
+      />
+
+      {/* DRES submit modal (shared for keyframe + chatbox) */}
+      <DresSubmitModal
+        isOpen={isDresModalOpen}
+        onClose={() => setIsDresModalOpen(false)}
+        initialData={dresInitialData}
       />
     </div>
   )

@@ -4,9 +4,10 @@ import TemporalIDResults from '../components/TemporalIDResults'
 import TemporalTupleResults from '../components/TemporalTupleResults'
 import ImageSearchButton from '../components/ImageSearchButton'
 import SaveAnswerButton from '../components/SaveAnswerButton'
+import DresSubmitButton from '../components/DresSubmitButton'
 import api from '../services/api'
 
-function MainContent({ searchResults, isSearching = false, searchError = null, onImageClick = null, selectedResult = null, isModalOpen = false, onCloseModal = null, mediaIndex = null, fpsMapping = null, viewMode = 'E', onImageSearch = null, onSaveAnswer = null, currentQuery = '' }) {
+function MainContent({ searchResults, isSearching = false, searchError = null, onImageClick = null, selectedResult = null, isModalOpen = false, onCloseModal = null, mediaIndex = null, fpsMapping = null, viewMode = 'E', onImageSearch = null, onSaveAnswer = null, currentQuery = '', onDresSubmitClick = null }) {
   return (
     <div className="fixed top-6 left-0 md:left-52 right-0 bottom-0 bg-white overflow-y-auto">
       <div className="relative w-full h-full">
@@ -62,6 +63,7 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
                 onImageClick={onImageClick}
                 onImageSearch={onImageSearch}
                 onSaveAnswer={onSaveAnswer}
+                onDresSubmitClick={onDresSubmitClick}
               />
             </div>
           ) : searchResults.temporalMode === 'tuple' ? (
@@ -78,6 +80,7 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
                 onImageClick={onImageClick}
                 onImageSearch={onImageSearch}
                 onSaveAnswer={onSaveAnswer}
+                onDresSubmitClick={onDresSubmitClick}
               />
             </div>
           ) : viewMode === 'M' && searchResults.allMethods ? (
@@ -120,6 +123,9 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
                               {onSaveAnswer && (
                                 <SaveAnswerButton result={result} onSave={onSaveAnswer} />
                               )}
+                              {onDresSubmitClick && (
+                                <DresSubmitButton result={result} onSubmit={onDresSubmitClick} />
+                              )}
                             </div>
                           )}
                         </div>
@@ -157,6 +163,9 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
                       {onSaveAnswer && (
                         <SaveAnswerButton result={result} onSave={onSaveAnswer} />
                       )}
+                      {onDresSubmitClick && (
+                        <DresSubmitButton result={result} onSubmit={onDresSubmitClick} />
+                      )}
                     </div>
                   )}
                 </div>
@@ -188,6 +197,7 @@ function MainContent({ searchResults, isSearching = false, searchError = null, o
         mediaIndex={mediaIndex}
         fpsMapping={fpsMapping}
         onSaveAnswer={onSaveAnswer}
+        onDresSubmitClick={onDresSubmitClick}
       />
       </div>
     </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 
-function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping, onSaveAnswer = null }) {
+function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping, onSaveAnswer = null, onDresSubmitClick = null }) {
   const [videoId, setVideoId] = useState(null)
   const [videoFolder, setVideoFolder] = useState(null)
   const [frameIdx, setFrameIdx] = useState(null)
@@ -152,6 +152,32 @@ function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping, onSaveAns
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                 </svg>
                 <span>Save as Answer</span>
+              </button>
+            )}
+            {onDresSubmitClick && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDresSubmitClick(result)
+                }}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 flex items-center gap-2"
+                title="Submit to DRES"
+              >
+                <svg
+                  className="h-4 w-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                <span>Submit DRES</span>
               </button>
             )}
             <button
