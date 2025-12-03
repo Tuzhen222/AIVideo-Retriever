@@ -18,10 +18,11 @@ def extract_video_and_frame(keyframe_path: str) -> Tuple[Optional[str], Optional
     """
     Extract video folder and frame index from keyframe_path.
     
-    Examples:
-    - "/keyframes/L01_V001/123.webp" -> ("L01_V001", 123)
+    Supports both 2-level and 3-level structures:
+    - 2-level: "/keyframes/L01_V001/123.webp" -> ("L01_V001", 123)
+    - 3-level: "/keyframes/L02/L02_V001/123.webp" -> ("L02_V001", 123)
     - "L01_V001/123.webp" -> ("L01_V001", 123)
-    - "keyframes/L01_V001/123.webp" -> ("L01_V001", 123)
+    - "L02/L02_V001/123.webp" -> ("L02_V001", 123)
     
     Returns:
         (video_folder, frame_index) or (None, None) if parsing fails
@@ -43,8 +44,17 @@ def extract_video_and_frame(keyframe_path: str) -> Tuple[Optional[str], Optional
     if len(parts) < 2:
         return None, None
     
-    video_folder = parts[0]
-    filename = parts[1]
+    # Handle both 2-level (folder/file) and 3-level (level/folder/file) structures
+    # For 3-level: L02/L02_V001/file.webp -> video_folder = L02_V001
+    # For 2-level: L01_V001/file.webp -> video_folder = L01_V001
+    if len(parts) >= 3:
+        # 3-level structure: level/folder/filename
+        video_folder = parts[-2]  # Second-to-last part is the video folder
+        filename = parts[-1]      # Last part is the filename
+    else:
+        # 2-level structure: folder/filename
+        video_folder = parts[0]
+        filename = parts[1]
     
     # Extract frame index from filename (e.g., "123.webp" -> 123)
     try:

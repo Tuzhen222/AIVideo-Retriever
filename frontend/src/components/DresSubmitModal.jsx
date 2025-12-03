@@ -2,26 +2,58 @@ import React, { useEffect, useState } from 'react'
 import Toast from './Toast'
 
 const DEFAULT_OFFSET_MS = 50
+const DRES_BASE_URL = 'http://192.168.20.156:5601/api/v2'
 
-function extractFromKeyframePath(keyframePath) {
+function extractFromKeyframePath(keyframePath, fpsMapping = null) {
   if (!keyframePath) {
-    return { videoId: '', timeMs: '' }
+    return { videoId: '', timeMs: '', frameIndex: '', videoFolder: '' }
   }
 
   const parts = keyframePath.split('/').filter(Boolean)
-  const folder = parts.length >= 2 ? parts[parts.length - 2] : ''
-  const filename = parts[parts.length - 1] || ''
+  let folder, filename
+  
+  // Remove 'keyframes' prefix if present
+  const startIdx = parts[0] === 'keyframes' ? 1 : 0
+  const actualParts = parts.slice(startIdx)
+  
+  // Handle both 2-level and 3-level structures:
+  // - 2-level: "L01_V001/0.webp"
+  // - 3-level: "L02/L02_V001/0.webp"
+  if (actualParts.length >= 3) {
+    // 3-level structure: L02/L02_V001/0.webp
+    folder = actualParts[actualParts.length - 2] // e.g., "L02_V001"
+    filename = actualParts[actualParts.length - 1] // e.g., "0.webp"
+  } else if (actualParts.length >= 2) {
+    // 2-level structure: L01_V001/0.webp
+    folder = actualParts[0] // e.g., "L01_V001"
+    filename = actualParts[1] // e.g., "0.webp"
+  } else {
+    return { videoId: '', timeMs: '', frameIndex: '', videoFolder: '' }
+  }
 
   const numMatch = filename.match(/(\d+)/)
-  const timeMs = numMatch ? parseInt(numMatch[1], 10) : ''
+  const frameIndex = numMatch ? parseInt(numMatch[1], 10) : ''
+  
+  // Convert frame index to milliseconds using FPS
+  let timeMs = ''
+  if (Number.isFinite(frameIndex) && fpsMapping && fpsMapping[folder]) {
+    const fps = fpsMapping[folder]
+    const timeInSeconds = frameIndex / fps
+    timeMs = Math.round(timeInSeconds * 1000) // Convert to milliseconds
+  } else if (Number.isFinite(frameIndex)) {
+    // Fallback: if no FPS mapping, use frame index as-is (for backward compatibility)
+    timeMs = frameIndex
+  }
 
   return {
     videoId: folder.replace(/\.[^/.]+$/, ''),
-    timeMs: Number.isFinite(timeMs) ? timeMs : ''
+    timeMs: timeMs,
+    frameIndex: frameIndex,
+    videoFolder: folder
   }
 }
 
-function DresSubmitModal({ isOpen, onClose, initialData }) {
+function DresSubmitModal({ isOpen, onClose, initialData, fpsMapping = null }) {
   const [mode, setMode] = useState('KIS') // 'KIS', 'QA', or 'TRAKE'
   const [sessionId, setSessionId] = useState('')
   const [evaluationId, setEvaluationId] = useState('')
@@ -52,14 +84,14 @@ function DresSubmitModal({ isOpen, onClose, initialData }) {
 
     if (initialData) {
       const { keyframe_path, query_text } = initialData
-      const { videoId: vf, timeMs: tf } = extractFromKeyframePath(keyframe_path)
+      const { videoId: vf, timeMs: tf, frameIndex: frameIdx } = extractFromKeyframePath(keyframe_path, fpsMapping)
 
       setVideoId(vf || '')
       setTimeMs(tf || '')
 
       const offset = DEFAULT_OFFSET_MS
       if (Number.isFinite(tf)) {
-        setStartMs(tf - offset)
+        setStartMs(Math.max(0, tf - offset)) // Ensure not negative
         setEndMs(tf + offset)
       } else {
         setStartMs('')
@@ -68,9 +100,9 @@ function DresSubmitModal({ isOpen, onClose, initialData }) {
 
       setAnswer(query_text || '')
       
-      // For TRAKE, prefill with single frame ID if available
-      if (Number.isFinite(tf)) {
-        setFrameIds(String(tf))
+      // For TRAKE, prefill with single frame ID if available (keep as frame index, not ms)
+      if (Number.isFinite(frameIdx)) {
+        setFrameIds(String(frameIdx))
       } else {
         setFrameIds('')
       }
@@ -95,7 +127,7 @@ function DresSubmitModal({ isOpen, onClose, initialData }) {
     setIsLoadingSession(true)
     setError('')
     try {
-      const resp = await fetch('https://eventretrieval.oj.io.vn/api/v2/login', {
+      const resp = await fetch(`${DRES_BASE_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -143,7 +175,7 @@ function DresSubmitModal({ isOpen, onClose, initialData }) {
     setIsLoadingEvaluation(true)
     setError('')
     try {
-      const url = `https://eventretrieval.oj.io.vn/api/v2/client/evaluation/list?session=${encodeURIComponent(sessionId.trim())}`
+      const url = `${DRES_BASE_URL}/client/evaluation/list?session=${encodeURIComponent(sessionId.trim())}`
       const resp = await fetch(url, {
         method: 'GET',
         headers: {
@@ -209,7 +241,7 @@ function DresSubmitModal({ isOpen, onClose, initialData }) {
       return
     }
 
-    const url = `https://eventretrieval.one/api/v2/submit/${encodeURIComponent(
+    const url = `${DRES_BASE_URL}/submit/${encodeURIComponent(
       evaluationId.trim()
     )}?session=${encodeURIComponent(sessionId.trim())}`
 
@@ -245,6 +277,11 @@ function DresSubmitModal({ isOpen, onClose, initialData }) {
         return
       }
 
+      if (!videoId.trim()) {
+        setError('Vui lòng nhập Video ID cho chế độ TRAKE')
+        return
+      }
+
       // Parse comma-separated frame IDs and validate
       const frameIdParts = frameIds.split(',').map((id) => id.trim()).filter((id) => id.length > 0)
       
@@ -253,17 +290,36 @@ function DresSubmitModal({ isOpen, onClose, initialData }) {
         return
       }
 
+      // Convert frame IDs to milliseconds using FPS
       const frameIdList = []
-      for (const id of frameIdParts) {
-        const num = Number(id)
-        if (!Number.isFinite(num)) {
-          setError(`Frame ID không hợp lệ: ${id}`)
-          return
+      const videoFolder = videoId.trim()
+      
+      if (fpsMapping && fpsMapping[videoFolder]) {
+        const fps = fpsMapping[videoFolder]
+        for (const id of frameIdParts) {
+          const frameIdx = Number(id)
+          if (!Number.isFinite(frameIdx)) {
+            setError(`Frame ID không hợp lệ: ${id}`)
+            return
+          }
+          // Convert frame index to milliseconds
+          const timeInSeconds = frameIdx / fps
+          const timeMs = Math.round(timeInSeconds * 1000)
+          frameIdList.push(String(timeMs))
         }
-        frameIdList.push(String(num))
+      } else {
+        // Fallback: if no FPS mapping, use frame IDs as-is
+        for (const id of frameIdParts) {
+          const num = Number(id)
+          if (!Number.isFinite(num)) {
+            setError(`Frame ID không hợp lệ: ${id}`)
+            return
+          }
+          frameIdList.push(String(num))
+        }
       }
 
-      // Format: TR-<VIDEO_ID>-<FRAME_ID1>,<FRAME_ID2>,...
+      // Format: TR-<VIDEO_ID>-<MS1>,<MS2>,... (milliseconds)
       const trakeText = `TR-${videoId.trim()}-${frameIdList.join(',')}`
       body = {
         answerSets: [
@@ -432,7 +488,7 @@ function DresSubmitModal({ isOpen, onClose, initialData }) {
               <p className="mt-1 text-xs text-gray-500">
                 URL submit sẽ là{' '}
                 <code className="bg-gray-100 px-1 py-0.5 rounded">
-                  https://eventretrieval.one/api/v2/submit/{'{' }evaluationId{'}'}
+                  {DRES_BASE_URL}/submit/{'{' }evaluationId{'}'}
                 </code>
               </p>
             </div>

@@ -35,16 +35,23 @@ function VideoModal({ result, isOpen, onClose, mediaIndex, fpsMapping, onSaveAns
     }
 
     // Extract folder and filename
-    // Format: "keyframes/L01_V001/0.webp" or "L01_V001/0.webp"
+    // Supports both formats:
+    // - 2-level: "keyframes/L01_V001/0.webp" or "L01_V001/0.webp"
+    // - 3-level: "keyframes/L02/L02_V001/0.webp" or "L02/L02_V001/0.webp"
     let folder, filename
-    if (pathParts[0] === 'keyframes' && pathParts.length >= 3) {
-      // Format: "keyframes/L01_V001/0.webp"
-      folder = pathParts[1] // e.g., "L01_V001"
-      filename = pathParts[2] // e.g., "0.webp"
-    } else if (pathParts.length >= 2) {
-      // Format: "L01_V001/0.webp"
-      folder = pathParts[0] // e.g., "L01_V001"
-      filename = pathParts[1] // e.g., "0.webp"
+    
+    // Remove 'keyframes' prefix if present
+    const startIdx = pathParts[0] === 'keyframes' ? 1 : 0
+    const actualParts = pathParts.slice(startIdx)
+    
+    if (actualParts.length >= 3) {
+      // 3-level structure: L02/L02_V001/0.webp
+      folder = actualParts[actualParts.length - 2] // e.g., "L02_V001"
+      filename = actualParts[actualParts.length - 1] // e.g., "0.webp"
+    } else if (actualParts.length >= 2) {
+      // 2-level structure: L01_V001/0.webp
+      folder = actualParts[0] // e.g., "L01_V001"
+      filename = actualParts[1] // e.g., "0.webp"
     } else {
       console.warn('VideoModal: Cannot parse keyframe_path', keyframePath)
       return

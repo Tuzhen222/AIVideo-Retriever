@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     
     # Data paths
     DATA_ROOT: str = "app/data"
-    KEYFRAME_DIR: str = "app/data/keyframe"
+    KEYFRAME_DIR: str = "app/data/keyframes"
     INDEX_DIR: str = "app/data/index"
     MAPPING_KF_PATH: str = "app/data/index/mapping_kf.json"
     MAPPING_SCENE_PATH: str = "app/data/index/mapping_scene.json"

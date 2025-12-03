@@ -46,7 +46,7 @@ async def get_image_embedding(image_path: str) -> List[float]:
     if image_path.startswith("/keyframes/"):
         # Remove "/keyframes/" prefix and add proper data directory path
         relative_path = image_path.replace("/keyframes/", "")
-        full_path = os.path.join(settings.BASE_DIR, "app", "data", "keyframe", relative_path)
+        full_path = os.path.join(settings.BASE_DIR, "app", "data", "keyframes", relative_path)
     elif image_path.startswith("backend/app/data/keyframe/"):
         # Already in mapping format
         full_path = os.path.join(settings.BASE_DIR, image_path.replace("backend/", ""))

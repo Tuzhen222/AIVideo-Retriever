@@ -39,7 +39,7 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
-    entrypoint: [] 
+    # Use entrypoint script to run ingest automatically, then start uvicorn with hot-reload
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

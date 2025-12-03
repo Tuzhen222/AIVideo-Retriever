@@ -726,6 +726,7 @@ function App() {
         isOpen={isDresModalOpen}
         onClose={() => setIsDresModalOpen(false)}
         initialData={dresInitialData}
+        fpsMapping={fpsMapping}
       />
     </div>
   )

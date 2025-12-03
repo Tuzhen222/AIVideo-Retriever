@@ -48,11 +48,11 @@ def _normalize_keyframe_path(path: str) -> str:
     path = path.replace("\\", "/")
 
     remove_prefix = [
-        "backend/app/data/keyframe/",
-        "app/data/keyframe/",
+        "backend/app/data/keyframes/",
+        "app/data/keyframes/",
         "backend/",
-        "/app/data/keyframe/",
-        "/app/app/data/keyframe/",
+        "/app/data/keyframes/",
+        "/app/app/data/keyframes/",
     ]
 
     for p in remove_prefix:
