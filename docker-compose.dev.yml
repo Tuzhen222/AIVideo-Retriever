@@ -16,11 +16,9 @@ services:
       - QDRANT_HOST=qdrant  # Use service name in Docker network
       - ELASTICSEARCH_HOST=elasticsearch  # Use service name in Docker network
       - ELASTICSEARCH_PORT=9200
-      - POSTGRES_HOST=postgres  # Use service name in Docker network
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=aivideo_chatbox
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      # PostgreSQL: Use RDS (cloud database) - values from .env file
+      # POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
+      # will be read from ./backend/.env file
       # All other values (DEFAULT_TOP_K, CLIP_WEIGHT, etc.) will be read from .env file
     volumes:
       # Mount code for hot-reload
@@ -37,8 +35,7 @@ services:
         condition: service_started
       elasticsearch:
         condition: service_healthy
-      postgres:
-        condition: service_healthy
+      # postgres service removed - using RDS (cloud database) instead
     # Use entrypoint script to run ingest automatically, then start uvicorn with hot-reload
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app/app
     healthcheck:
