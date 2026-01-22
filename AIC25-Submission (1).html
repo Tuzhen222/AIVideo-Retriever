@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIC 2025 Submission Tool</title>
+    <!-- Load Tailwind CSS from CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Simple loading spinner animation */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        /* Hide number input arrows */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen flex items-center justify-center p-4">
+
+    <!-- Main Application Card -->
+    <div class="bg-white shadow-2xl rounded-xl p-6 md:p-8 w-full max-w-3xl space-y-6">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
+            AIC 2025 Submission Tool
+        </h1>
+
+        <!-- Step 1: Login -->
+        <div class="border border-gray-200 rounded-lg p-5">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Step 1: Login</h2>
+            <form id="login-form" class="space-y-4">
+                <!-- Base URL (Readonly) -->
+                <div>
+                    <label for="base-url" class="block text-sm font-medium text-gray-700 mb-1">API Base URL</label>
+                    <input 
+                        type="text" 
+                        id="base-url" 
+                        class="w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500" 
+                        value="https://eventretrieval.oj.io.vn/api/v2"
+                    >
+                </div>
+                <!-- Username -->
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                        placeholder="Your team's username"
+                        required
+                    >
+                </div>
+                <!-- Password -->
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                        placeholder="Your team's password"
+                        required
+                    >
+                </div>
+                <!-- Submit Button -->
+                <button 
+                    type="submit" 
+                    id="login-button"
+                    class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300 shadow-lg"
+                >
+                    Login & Fetch Evaluation
+                </button>
+            </form>
+            <!-- Login Status -->
+            <div id="login-status" class="mt-4" aria-live="polite">
+                <!-- Status messages (loading, error, success) will be injected here -->
+            </div>
+        </div>
+
+        <!-- Step 2: Evaluation Info (Auto-filled) -->
+        <div id="evaluation-section" class="hidden border border-gray-200 rounded-lg p-5">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Step 2: Active Evaluation</h2>
+            <div id="evaluation-status" aria-live="polite">
+                <!-- Status messages (loading, error, success) will be injected here -->
+            </div>
+            <div id="evaluation-details" class="hidden space-y-2 font-mono text-sm">
+                <p><strong>Evaluation Name:</strong> <span id="eval-name" class="text-gray-700"></span></p>
+                <p><strong>Evaluation ID:</strong> <span id="eval-id" class="text-blue-600"></span></p>
+            </div>
+        </div>
+
+
+        <!-- Step 3: Submit Answer -->
+        <div id="submission-section" class="hidden border border-gray-200 rounded-lg p-5">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Step 3: Submit Answer</h2>
+            
+            <form id="submission-form" class="space-y-4">
+                <!-- Submission Type -->
+                <div>
+                    <label for="submission-type" class="block text-sm font-medium text-gray-700 mb-1">Submission Type</label>
+                    <select id="submission-type" class="w-full p-3 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500">
+                        <option value="KIS">Known-Item Search (KIS)</option>
+                        <option value="QA">Q&A</option>
+                        <option value="TRAKE">TRAKE</option>
+                    </select>
+                </div>
+
+                <!-- KIS Inputs -->
+                <div id="kis-inputs" class="space-y-4">
+                    <div>
+                        <label for="kis-video-id" class="block text-sm font-medium text-gray-700 mb-1">Video ID (mediaItemName)</label>
+                        <input type="text" id="kis-video-id" class="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm" placeholder="e.g., v_0001">
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="kis-start-time" class="block text-sm font-medium text-gray-700 mb-1">Start Time (ms)</label>
+                            <input type="number" id="kis-start-time" class="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm" placeholder="e.g., 123456">
+                        </div>
+                        <div>
+                            <label for="kis-end-time" class="block text-sm font-medium text-gray-700 mb-1">End Time (ms)</label>
+                            <input type="number" id="kis-end-time" class="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm" placeholder="e.g., 123999">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- QA Inputs (Initially Hidden) -->
+                <div id="qa-inputs" class="hidden space-y-4">
+                    <div>
+                        <label for="qa-answer" class="block text-sm font-medium text-gray-700 mb-1">Answer (Text)</label>
+                        <input type="text" id="qa-answer" class="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm" placeholder="e.g., 12345">
+                    </div>
+                    <div>
+                        <label for="qa-video-id" class="block text-sm font-medium text-gray-700 mb-1">Video ID</label>
+                        <input type="text" id="qa-video-id" class="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm" placeholder="e.g., v_0002">
+                    </div>
+                    <div>
+                        <label for="qa-time" class="block text-sm font-medium text-gray-700 mb-1">Time (ms)</label>
+                        <input type="number" id="qa-time" class="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm" placeholder="e.g., 456789">
+                    </div>
+                </div>
+
+                <!-- TRAK Inputs (Initially Hidden) -->
+                <div id="trake-inputs" class="hidden space-y-4">
+                    <div>
+                        <label for="trake-video-id" class="block text-sm font-medium text-gray-700 mb-1">Video ID</label>
+                        <input type="text" id="trake-video-id" class="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm" placeholder="e.g., v_0003">
+                    </div>
+                    <div>
+                        <label for="trake-frame-list" class="block text-sm font-medium text-gray-700 mb-1">List Frame IDs (comma-separated)</label>
+                        <input type="text" id="trake-frame-list" class="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm" placeholder="e.g., 12345,67890,98765">
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button 
+                    type="submit" 
+                    id="submit-answer-button"
+                    class="w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition duration-300 shadow-lg"
+                >
+                    Submit Answer
+                </button>
+            </form>
+            <!-- Submission Status -->
+            <div id="submission-status" class="mt-4" aria-live="polite">
+                <!-- Status messages (loading, error, success) will be injected here -->
+            </div>
+            <!-- Response Display Area -->
+            <div id="response-container" class="hidden mt-6 space-y-4">
+                <h3 class="text-xl font-semibold text-gray-800">Submission Response</h3>
+                <div>
+                    <h4 class="font-medium text-gray-700">Status:</h4>
+                    <div id="status-code" class="mt-1 px-4 py-2 bg-gray-100 rounded-lg font-mono font-bold">
+                        <!-- Status will be set by JS -->
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-medium text-gray-700">Body:</h4>
+                    <pre class="bg-gray-900 text-white text-sm p-4 rounded-lg overflow-x-auto max-h-80"><code id="response-body"><!-- Response JSON/text will be set by JS --></code></pre>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // DOM Elements
+        const loginForm = document.getElementById('login-form');
+        const loginButton = document.getElementById('login-button');
+        const loginStatus = document.getElementById('login-status');
+        const baseUrlInput = document.getElementById('base-url');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+
+        const evaluationSection = document.getElementById('evaluation-section');
+        const evaluationStatus = document.getElementById('evaluation-status');
+        const evaluationDetails = document.getElementById('evaluation-details');
+        const evalNameEl = document.getElementById('eval-name');
+        const evalIdEl = document.getElementById('eval-id');
+
+        const submissionSection = document.getElementById('submission-section');
+        const submissionForm = document.getElementById('submission-form');
+        const submissionTypeSelect = document.getElementById('submission-type');
+        const kisInputs = document.getElementById('kis-inputs');
+        const qaInputs = document.getElementById('qa-inputs');
+        const trakInputs = document.getElementById('trake-inputs');
+        const submissionStatus = document.getElementById('submission-status');
+        
+        const responseContainer = document.getElementById('response-container');
+        const statusCodeEl = document.getElementById('status-code');
+        const responseBodyEl = document.getElementById('response-body');
+
+        // App State
+        let sessionId = null;
+        let evaluationId = null;
+
+        // --- Helper Functions ---
+        function showStatus(element, message, type = 'loading') {
+            let colorClass = 'text-gray-600';
+            let icon = `<div class="spinner border-t-transparent border-solid rounded-full border-blue-500 border-4 h-6 w-6 inline-block mr-2 -mb-1"></div>`;
+            if (type === 'error') {
+                colorClass = 'text-red-600';
+                icon = '<strong>Error:</strong> ';
+            } else if (type === 'success') {
+                colorClass = 'text-green-600';
+                icon = '<strong>Success:</strong> ';
+            }
+            element.innerHTML = `<p class="${colorClass}">${icon}${message}</p>`;
+        }
+
+        function clearStatus(element) {
+            element.innerHTML = '';
+        }
+
+        function toggleSubmissionType() {
+            if (submissionTypeSelect.value === 'KIS') {
+                kisInputs.classList.remove('hidden');
+                qaInputs.classList.add('hidden');
+                trakInputs.classList.add('hidden');
+            } else if (submissionTypeSelect.value === 'QA') {
+                kisInputs.classList.add('hidden');
+                qaInputs.classList.remove('hidden');
+                trakInputs.classList.add('hidden');
+            } else { // TRAKE
+                kisInputs.classList.add('hidden');
+                qaInputs.classList.add('hidden');
+                trakInputs.classList.remove('hidden');
+            }
+        }
+        
+        // --- Step 1: Login ---
+        async function handleLogin(event) {
+            event.preventDefault();
+            loginButton.disabled = true;
+            showStatus(loginStatus, 'Logging in...', 'loading');
+            evaluationSection.classList.add('hidden');
+            submissionSection.classList.add('hidden');
+            responseContainer.classList.add('hidden');
+
+            const baseUrl = baseUrlInput.value;
+            const username = usernameInput.value;
+            const password = passwordInput.value;
+            const loginUrl = `${baseUrl}/login`;
+
+            try {
+                const response = await fetch(loginUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.description || 'Login failed');
+                }
+
+                sessionId = data.sessionId;
+                showStatus(loginStatus, 'Login successful!', 'success');
+                loginButton.disabled = false;
+                
+                // Automatically trigger Step 2
+                await fetchEvaluation(sessionId);
+
+            } catch (error) {
+                showStatus(loginStatus, error.message, 'error');
+                loginButton.disabled = false;
+            }
+        }
+
+        // --- Step 2: Fetch Evaluation (Automatic) ---
+        async function fetchEvaluation(sessionId) {
+            evaluationSection.classList.remove('hidden');
+            showStatus(evaluationStatus, 'Fetching active evaluation...', 'loading');
+
+            const baseUrl = baseUrlInput.value;
+            const evaluationListUrl = `${baseUrl}/client/evaluation/list?session=${sessionId}`;
+
+            try {
+                const response = await fetch(evaluationListUrl, { method: 'GET' });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.description || 'Failed to fetch evaluations');
+                }
+
+                // Find the first active, synchronous evaluation as per docs
+                const activeEvaluation = data.find(eval => eval.type === 'SYNCHRONOUS' && eval.status === 'ACTIVE');
+
+                if (!activeEvaluation) {
+                    throw new Error('No active evaluation found.');
+                }
+
+                evaluationId = activeEvaluation.id;
+                evalNameEl.textContent = activeEvaluation.name;
+                evalIdEl.textContent = activeEvaluation.id;
+                
+                clearStatus(evaluationStatus);
+                evaluationDetails.classList.remove('hidden');
+                
+                // Show Step 3
+                submissionSection.classList.remove('hidden');
+
+            } catch (error) {
+                showStatus(evaluationStatus, error.message, 'error');
+                evaluationDetails.classList.add('hidden');
+                submissionSection.classList.add('hidden');
+            }
+        }
+
+        // --- Step 3: Submit Answer ---
+        async function handleSubmitAnswer(event) {
+            event.preventDefault();
+            showStatus(submissionStatus, 'Submitting answer...', 'loading');
+            responseContainer.classList.add('hidden');
+
+            if (!sessionId || !evaluationId) {
+                showStatus(submissionStatus, 'Session or Evaluation ID is missing. Please log in again.', 'error');
+                return;
+            }
+
+            const baseUrl = baseUrlInput.value;
+            const submitUrl = `${baseUrl}/submit/${evaluationId}?session=${sessionId}`;
+            const type = submissionTypeSelect.value;
+            let submissionBody;
+
+            try {
+                if (type === 'KIS') {
+                    const videoId = document.getElementById('kis-video-id').value;
+                    const startTime = parseInt(document.getElementById('kis-start-time').value, 10);
+                    const endTime = parseInt(document.getElementById('kis-end-time').value, 10);
+                    
+                    if (!videoId || isNaN(startTime) || isNaN(endTime)) {
+                        throw new Error('KIS fields cannot be empty and times must be numbers.');
+                    }
+                    
+                    submissionBody = {
+                        answerSets: [{
+                            answers: [{
+                                mediaItemName: videoId,
+                                start: startTime,
+                                end: endTime
+                            }]
+                        }]
+                    };
+                } else if (type === 'QA') {
+                    const answer = document.getElementById('qa-answer').value;
+                    const videoId = document.getElementById('qa-video-id').value;
+                    const time = parseInt(document.getElementById('qa-time').value, 10);
+
+                    if (!answer || !videoId || isNaN(time)) {
+                        throw new Error('Q&A fields cannot be empty and time must be a number.');
+                    }
+                    
+                    // Format: "QA-<ANSWER>-<VIDEO_ID>-<TIME(ms)>"
+                    const formattedText = `QA-${answer}-${videoId}-${time}`;
+                    
+                    submissionBody = {
+                        answerSets: [{
+                            answers: [{
+                                text: formattedText
+                            }]
+                        }]
+                    };
+                } else if (type === 'TRAKE') {
+                    const videoId = document.getElementById('trake-video-id').value;
+                    const frameList = document.getElementById('trake-frame-list').value;
+
+                    if (!videoId || !frameList) {
+                        throw new Error('TRAKE fields cannot be empty.');
+                    }
+                    
+                    // Format: "TR-<VIDEO_ID>-<FRAME_ID1>,<FRAME_ID2>,..."
+                    const formattedText = `TR-${videoId}-${frameList}`;
+                    
+                    submissionBody = {
+                        answerSets: [{
+                            answers: [{
+                                text: formattedText
+                            }]
+                        }]
+                    };
+                }
+
+                const response = await fetch(submitUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(submissionBody)
+                });
+                
+                const responseText = await response.text();
+                showStatus(submissionStatus, 'Submission processed.', response.ok ? 'success' : 'error');
+
+                // Display response details
+                statusCodeEl.textContent = `${response.status} ${response.statusText}`;
+                if (response.ok) {
+                    statusCodeEl.classList.remove('text-red-600');
+                    statusCodeEl.classList.add('text-green-600');
+                } else {
+                    statusCodeEl.classList.remove('text-green-600');
+                    statusCodeEl.classList.add('text-red-600');
+                }
+
+                try {
+                    const jsonData = JSON.parse(responseText);
+                    responseBodyEl.textContent = JSON.stringify(jsonData, null, 2);
+                } catch (e) {
+                    responseBodyEl.textContent = responseText;
+                }
+                responseContainer.classList.remove('hidden');
+
+            } catch (error) {
+                showStatus(submissionStatus, error.message, 'error');
+            }
+        }
+
+
+        // --- Attach Event Listeners ---
+        loginForm.addEventListener('submit', handleLogin);
+        submissionForm.addEventListener('submit', handleSubmitAnswer);
+        submissionTypeSelect.addEventListener('change', toggleSubmissionType);
+
+        // Run toggle function once on page load
+        toggleSubmissionType();
+    </script>
+
+</body>
+</html>
+
+

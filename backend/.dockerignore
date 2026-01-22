@@ -1,0 +1,36 @@
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+dist
+build
+.eggs
+.pytest_cache
+.mypy_cache
+.venv
+venv
+env
+ENV
+.env
+.env.*
+*.log
+.git
+.gitignore
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# Exclude heavy data directories (will be mounted as volumes at runtime)
+# This speeds up Docker build context transfer
+app/data/keyframe/**
+app/data/index/bin/**
+app/data/index/es_data/**
+
+# Keep only mapping JSON files
+!app/data/index/*.json
+
+
