@@ -4,7 +4,7 @@ Hệ thống tìm kiếm video thông minh được tối ưu hóa cho thi đấ
 
 <!-- TODO: Chèn ảnh giao diện tìm kiếm tại đây -->
 ![Giao diện tìm kiếm](./images/1.png)
-![Giao diện xem keyframes](./images/2.png)
+![Giao diện xem keyframes](./images/black.png)
 ## 📋 Mục lục
 
 - [Mục tiêu hệ thống](#mục-tiêu-hệ-thống)
