@@ -266,7 +266,7 @@ Hệ thống tích hợp với **DRES** (hệ thống chấm bài thi đấu) đ
 - **Auto-fill**: Hệ thống tự động điền thông tin từ keyframe path đã chọn, chuyển đổi frame index thành thời gian theo FPS
 
 <!-- TODO: Chèn ảnh giao diện nộp bài DRES tại đây -->
-![Giao diện nộp bài DRES](./images/2.png)
+![Giao diện nộp bài DRES](./images/3.png)
 
 ---
 
