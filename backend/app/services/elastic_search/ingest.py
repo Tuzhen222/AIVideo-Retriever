@@ -314,7 +314,7 @@ def main():
     
     # Ingest all files
     try:
-        ingester.ingest_all_files(data_dir, batch_size=1000)
+        ingester.ingest_all_files(data_dir, batch_size=20000)
     except Exception as e:
         logger.error(f"❌ Ingestion failed: {e}")
         sys.exit(1)

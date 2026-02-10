@@ -121,5 +121,14 @@ class QdrantClient:
         except Exception as e:
             logger.error(f"❌ Search failed in {collection_name}: {e}")
             raise
-    
 
+
+# Singleton instance
+_qdrant_client = None
+
+def get_qdrant_client() -> QdrantClient:
+    """Get singleton Qdrant client instance"""
+    global _qdrant_client
+    if _qdrant_client is None:
+        _qdrant_client = QdrantClient()
+    return _qdrant_client

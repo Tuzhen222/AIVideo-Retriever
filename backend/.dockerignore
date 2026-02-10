@@ -24,3 +24,13 @@ ENV
 *.swo
 .DS_Store
 
+# Exclude heavy data directories (will be mounted as volumes at runtime)
+# This speeds up Docker build context transfer
+app/data/keyframe/**
+app/data/index/bin/**
+app/data/index/es_data/**
+
+# Keep only mapping JSON files
+!app/data/index/*.json
+
+

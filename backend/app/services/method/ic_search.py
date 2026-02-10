@@ -2,9 +2,11 @@ import json
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+import time
 
 import numpy as np
 import cohere
+from cohere.errors import TooManyRequestsError
 
 from app.core.config import settings
 from app.services.method.qwen_client import QwenClient
@@ -41,8 +43,10 @@ class ICSearch:
         top_k = top_k or settings.DEFAULT_TOP_K
 
         emb = self.qwen.extract_text_embedding(query)
-        if emb.size == 0:
-            logger.error("[IC] Qwen returned EMPTY embedding")
+        
+        # Check if embedding is valid (not empty and has proper shape)
+        if emb is None or emb.size == 0 or len(emb.shape) == 0 or emb.shape[0] == 0:
+            logger.error("[IC] Qwen returned EMPTY or invalid embedding")
             return []
 
         q_results = self.qdrant.search(
@@ -82,17 +86,56 @@ class ICSearch:
         if empty_text_ids:
             logger.warning(f"[IC] EMPTY TEXT FOUND for IDs: {empty_text_ids[:20]} (showing max 20)")
 
-        for i in range(min(3, len(doc_texts))):
-            logger.info(f"[IC] SAMPLE DOC {doc_ids[i]} TEXT (first 200 chars): {doc_texts[i][:200]}")
-
-        co = self._client()
-
-        rerank = co.rerank(
-            model="rerank-multilingual-v3.0",   
-            query=query,
-            documents=doc_texts,
-            top_n=top_k
-        )
+        # Retry logic with exponential backoff for Cohere rate limits
+        max_retries = 3
+        retry_delay = 2  # Start with 2 seconds
+        
+        for attempt in range(max_retries):
+            try:
+                co = self._client()
+                rerank = co.rerank(
+                    model="rerank-multilingual-v3.0",   
+                    query=query,
+                    documents=doc_texts,
+                    top_n=top_k
+                )
+                break  # Success, exit retry loop
+                
+            except TooManyRequestsError as e:
+                logger.warning(f"[IC] Cohere rate limit hit (attempt {attempt + 1}/{max_retries}): {e}")
+                
+                if attempt < max_retries - 1:
+                    # Exponential backoff
+                    wait_time = retry_delay * (2 ** attempt)
+                    logger.info(f"[IC] Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                else:
+                    # Final attempt failed, fallback to Qdrant results only
+                    logger.error(f"[IC] Cohere rate limit exceeded after {max_retries} attempts, using Qdrant results as fallback")
+                    return [
+                        {
+                            "id": str(r["id"]),
+                            "score": float(r["score"]),
+                            "text": self.ic_data.get(str(r["id"]), ""),
+                            "method": "ic",
+                            "keyframe_path": get_keyframe_path(str(r["id"]))
+                        }
+                        for r in q_results[:top_k]
+                    ]
+                    
+            except Exception as e:
+                logger.error(f"[IC] Cohere rerank error: {e}")
+                # Fallback to Qdrant results
+                return [
+                    {
+                        "id": str(r["id"]),
+                        "score": float(r["score"]),
+                        "text": self.ic_data.get(str(r["id"]), ""),
+                        "method": "ic",
+                        "keyframe_path": get_keyframe_path(str(r["id"]))
+                    }
+                    for r in q_results[:top_k]
+                ]
 
         try:
             cohere_debug = ", ".join(

@@ -35,74 +35,82 @@ help:
 	@echo "  make kibana-logs     - Show Kibana logs"
 	@echo "  make kibana-status   - Check Kibana API status"
 	@echo "  make kibana-open     - Open Kibana in browser"
+	@echo ""
+	@echo "Database cleanup commands:"
+	@echo "  make clean-qdrant    - Delete all Qdrant collections"
+	@echo "  make clean-es        - Delete all Elasticsearch indices"
+	@echo "  make clean-db        - Delete both Qdrant and Elasticsearch data"
 
 # Start services
 start:
 	@echo "🛑 Stopping dev services first..."
-	-docker-compose -f docker-compose.dev.yml down 2>/dev/null || true
+	-docker compose -f docker compose.dev.yml down 2>/dev/null || true
 	@echo "🚀 Starting production services..."
-	docker-compose up -d
+	docker compose up -d
 	@echo "✅ Production services started"
-
+	
 start-dev:
-	@echo "🛑 Stopping production services first..."
-	-docker-compose down 2>/dev/null || true
+	@echo "🛑 Stopping current services first..."
+	-docker compose down 2>/dev/null || true
 	@echo "🚀 Starting development services..."
-	docker-compose -f docker-compose.dev.yml up -d
-	@echo "✅ Development services started"
+	docker compose -f docker-compose.dev.yml up -d --remove-orphans
+	@echo "✅ Development services started!"
+
 
 dev:
 	@echo "🛑 Stopping production services first..."
-	-docker-compose down 2>/dev/null || true
+	-docker compose down 2>/dev/null || true
 	@echo "🚀 Starting development services (foreground, with logs)..."
-	docker-compose -f docker-compose.dev.yml up --build
+	docker compose -f docker compose.dev.yml up --build
 
 dev-up:
 	@echo "🛑 Stopping production services first..."
-	-docker-compose down 2>/dev/null || true
+	-docker compose down 2>/dev/null || true
 	@echo "🚀 Starting development services (detached)..."
-	docker-compose -f docker-compose.dev.yml up -d --build
+	docker compose -f docker compose.dev.yml up -d --build
 	@echo "✅ Development services started (detached)"
 
 dev-logs:
 	@echo "📜 Tailing development logs..."
-	docker-compose -f docker-compose.dev.yml logs -f
+	docker compose -f docker compose.dev.yml logs -f
 
 dev-restart:
 	@echo "🔄 Restarting development services..."
-	docker-compose -f docker-compose.dev.yml restart backend frontend
+	docker compose -f docker-compose.dev.yml restart backend frontend
 	@echo "✅ Development services restarted"
 
 dev-reload-env:
 	@echo "🔄 Reloading .env file (down/up backend to reload env)..."
-	docker-compose -f docker-compose.dev.yml stop backend
-	docker-compose -f docker-compose.dev.yml up -d backend
+	docker compose -f docker compose.dev.yml stop backend
+	docker compose -f docker compose.dev.yml up -d backend
 	@echo "✅ Backend restarted with new .env settings"
 
 # Stop services
 stop:
-	docker-compose down
-	docker-compose -f docker-compose.dev.yml down 2>/dev/null || true
+	docker compose down
+	docker compose -f docker compose.dev.yml down 2>/dev/null || true
 
 # Restart services
 restart: stop start
 
 # Build images
 build:
-	docker-compose build
+	docker compose build
 
 build-dev:
-	docker-compose -f docker-compose.dev.yml build
+	docker compose -f docker-compose.dev.yml build
+
 
 rebuild:
-	docker-compose build --no-cache
+	docker compose build --no-cache
 
 rebuild-dev:
-	docker-compose -f docker-compose.dev.yml build --no-cache
+	docker compose -f docker-compose.dev.yml build --no-cache
+
 
 # View logs
 logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 # Clean Docker resources
 clean: clean-docker clean-volumes clean-networks
@@ -110,16 +118,16 @@ clean: clean-docker clean-volumes clean-networks
 
 clean-docker:
 	@echo "🧹 Removing Docker containers..."
-	-docker-compose down --remove-orphans 2>/dev/null || true
-	-docker-compose -f docker-compose.dev.yml down --remove-orphans 2>/dev/null || true
+	-docker compose down --remove-orphans 2>/dev/null || true
+	-docker compose -f docker compose.dev.yml down --remove-orphans 2>/dev/null || true
 	-docker rm -f aivideo-backend aivideo-frontend aivideo-backend-dev aivideo-frontend-dev aivideo-elasticsearch aivideo-kibana aivideo-elasticsearch-dev aivideo-kibana-dev aivideo-qdrant aivideo-qdrant-dev 2>/dev/null || true
 	-docker ps -a --filter "name=aivideo" -q | xargs -r docker rm -f 2>/dev/null || true
 	@echo "✅ Docker containers removed"
 
 clean-volumes:
 	@echo "🧹 Removing Docker volumes..."
-	-docker-compose down -v 2>/dev/null || true
-	-docker-compose -f docker-compose.dev.yml down -v 2>/dev/null || true
+	-docker compose down -v 2>/dev/null || true
+	-docker compose -f docker compose.dev.yml down -v 2>/dev/null || true
 	-docker volume ls --filter "name=aivideo" -q | xargs -r docker volume rm 2>/dev/null || true
 	-docker volume ls --filter "name=elasticsearch" -q | xargs -r docker volume rm 2>/dev/null || true
 	-docker volume ls --filter "name=qdrant" -q | xargs -r docker volume rm 2>/dev/null || true
@@ -212,8 +220,8 @@ clean-full: clean-all clean-files
 # Elasticsearch commands
 es-ingest:
 	@echo "📦 Ingesting JSON files into Elasticsearch..."
-	@docker-compose exec backend python -m app.services.elastic_search.ingest || \
-	 docker-compose -f docker-compose.dev.yml exec backend python -m app.services.elastic_search.ingest || \
+	@docker compose exec backend python -m app.services.elastic_search.ingest || \
+	 docker compose -f docker compose.dev.yml exec backend python -m app.services.elastic_search.ingest || \
 	 echo "⚠️  Please ensure services are running and backend container is available"
 
 es-status:
@@ -223,14 +231,14 @@ es-status:
 
 es-logs:
 	@echo "📋 Elasticsearch logs (Ctrl+C to exit)..."
-	@docker-compose logs -f elasticsearch || \
-	 docker-compose -f docker-compose.dev.yml logs -f elasticsearch || \
+	@docker compose logs -f elasticsearch || \
+	 docker compose -f docker compose.dev.yml logs -f elasticsearch || \
 	 echo "⚠️  Elasticsearch container not found"
 
 kibana-logs:
 	@echo "📋 Kibana logs (Ctrl+C to exit)..."
-	@docker-compose logs -f kibana || \
-	 docker-compose -f docker-compose.dev.yml logs -f kibana || \
+	@docker compose logs -f kibana || \
+	 docker compose -f docker compose.dev.yml logs -f kibana || \
 	 echo "⚠️  Kibana container not found"
 
 kibana-status:
@@ -247,3 +255,48 @@ kibana-open:
 	 which start >/dev/null 2>&1 && start http://localhost:5601 || \
 	 echo "⚠️  Please open http://localhost:5601 manually in your browser"
 
+# Database cleanup commands
+clean-qdrant:
+	@echo "🗑️  Deleting all Qdrant collections..."
+	@docker exec aivideo-backend-dev python -c "\
+from qdrant_client import QdrantClient; \
+client = QdrantClient(host='qdrant', port=6334, prefer_grpc=True); \
+collections = client.get_collections().collections; \
+[client.delete_collection(col.name) or print(f'✅ Deleted: {col.name}') for col in collections]; \
+print('✅ All Qdrant collections deleted')" 2>/dev/null || \
+	docker exec aivideo-backend python -c "\
+from qdrant_client import QdrantClient; \
+client = QdrantClient(host='qdrant', port=6334, prefer_grpc=True); \
+collections = client.get_collections().collections; \
+[client.delete_collection(col.name) or print(f'✅ Deleted: {col.name}') for col in collections]; \
+print('✅ All Qdrant collections deleted')" || \
+	echo "⚠️  Backend container not found"
+
+clean-es:
+	@echo "🗑️  Deleting all Elasticsearch indices..."
+	@docker exec aivideo-backend-dev python -c "\
+from elasticsearch import Elasticsearch; \
+es = Elasticsearch(['http://elasticsearch:9200']); \
+indices = [idx for idx in es.indices.get(index='*') if not idx.startswith('.')]; \
+[es.indices.delete(index=idx) or print(f'✅ Deleted: {idx}') for idx in indices]; \
+print('✅ All Elasticsearch indices deleted')" 2>/dev/null || \
+	docker exec aivideo-backend python -c "\
+from elasticsearch import Elasticsearch; \
+es = Elasticsearch(['http://elasticsearch:9200']); \
+indices = [idx for idx in es.indices.get(index='*') if not idx.startswith('.')]; \
+[es.indices.delete(index=idx) or print(f'✅ Deleted: {idx}') for idx in indices]; \
+print('✅ All Elasticsearch indices deleted')" || \
+	echo "⚠️  Backend container not found"
+
+clean-db: clean-qdrant clean-es
+	@echo "✅ All database collections and indices deleted"
+
+set-up-server:
+	sudo apt update
+	sudo apt install -y ca-certificates curl gnupg lsb-release
+	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+	echo \
+	  "deb [arch=$$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+	  $$(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+	sudo apt update
+	sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin

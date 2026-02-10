@@ -74,7 +74,7 @@ def get_keyframe_path(result_id: str) -> Optional[str]:
         return None
 
     normalized = _normalize_keyframe_path(mapping[rid])
-    return f"/keyframes/{normalized}"
+    return f"/keyframe/{normalized}"
 
 
 def get_scene_keyframe_path(scene_id: str) -> Optional[str]:
@@ -85,7 +85,7 @@ def get_scene_keyframe_path(scene_id: str) -> Optional[str]:
         return None
 
     normalized = _normalize_keyframe_path(mapping[sid])
-    return f"/keyframes/{normalized}"
+    return f"/keyframe/{normalized}"
 
 
 def _natural_key(s: str):

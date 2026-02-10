@@ -20,7 +20,7 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      '/keyframes': {
+      '/keyframe': {
         target: process.env.VITE_API_BASE_URL || 'http://backend:8000',
         changeOrigin: true,
         secure: false,

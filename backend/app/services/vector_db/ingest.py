@@ -63,6 +63,7 @@ def ingest_collection(
 ) -> None:
     """
     Ingest a single .bin file (faiss index) into Qdrant collection
+    Memory-efficient: load only metadata first, then process vectors in small batches
     
     Args:
         qdrant_client: Qdrant client instance
@@ -75,8 +76,8 @@ def ingest_collection(
     logger.info(f"🚀 Starting ingestion for {collection_name}...")
     start_time = time.time()
     
-    # Load faiss index
-    logger.info(f"📂 Loading faiss index from {bin_path}...")
+    # Load faiss index (only metadata, not vectors into RAM)
+    logger.info(f"📂 Loading faiss index metadata from {bin_path}...")
     index = load_faiss_index(bin_path)
     
     # Get vector info from index
@@ -89,11 +90,7 @@ def ingest_collection(
         vector_size = detected_vector_size
     
     logger.info(f"📊 Vector info: {num_vectors} vectors × {vector_size} dimensions")
-    
-    # Reconstruct all vectors from faiss index
-    logger.info(f"🔄 Reconstructing vectors from faiss index...")
-    vectors = index.reconstruct_n(0, num_vectors)  # Reconstruct all vectors
-    vectors = np.array(vectors).astype(np.float32)
+    logger.info(f"💾 Memory-efficient mode: Will load and upload {batch_size} vectors at a time")
     
     # Check if collection exists, create if not
     try:
@@ -103,7 +100,19 @@ def ingest_collection(
         collection_exists = False
     
     if collection_exists:
-        logger.warning(f"⚠️  Collection {collection_name} already exists, skipping creation")
+        # Check how many vectors already uploaded
+        try:
+            collection_info = qdrant_client.client.get_collection(collection_name)
+            existing_count = collection_info.points_count
+            logger.info(f"📊 Collection {collection_name} exists with {existing_count}/{num_vectors} vectors")
+            if existing_count >= num_vectors:
+                logger.info(f"✅ Collection {collection_name} already fully populated, skipping")
+                return
+            else:
+                logger.info(f"📤 Resuming upload from vector {existing_count}")
+        except Exception as e:
+            logger.warning(f"⚠️  Could not get collection info: {e}")
+            logger.info(f"📦 Collection exists, will attempt to continue upload")
     else:
         logger.info(f"📦 Creating collection: {collection_name} (distance={distance})")
         qdrant_client.client.create_collection(
@@ -114,45 +123,58 @@ def ingest_collection(
             )
         )
     
-    # Prepare IDs (simple sequential: 0, 1, 2, ...)
-    ids = list(range(num_vectors))
-    
-    # Upload vectors in batches (optimized for speed)
+    # Upload vectors in batches (memory efficient - load batch, upload, release memory)
     logger.info(f"🚀 Uploading {num_vectors} vectors in batches of {batch_size}...")
     
     total_batches = (num_vectors + batch_size - 1) // batch_size
     
-    # Use larger batch size for better performance (Qdrant gRPC handles large batches well)
-    # Process in chunks to avoid memory issues while maximizing throughput
+    # Process in chunks to avoid memory issues
     with tqdm(total=num_vectors, desc=f"Uploading {collection_name}", unit="vectors") as pbar:
         for batch_idx in range(total_batches):
             start_idx = batch_idx * batch_size
             end_idx = min(start_idx + batch_size, num_vectors)
             
-            # Use numpy views for efficiency (no copy)
-            batch_vectors = vectors[start_idx:end_idx]
-            batch_ids = ids[start_idx:end_idx]
-            
-            # Convert numpy array to list if needed
-            if isinstance(batch_vectors, np.ndarray):
-                batch_vectors = batch_vectors.tolist()
-            
-            # Create points
-            points = []
-            for vector, point_id in zip(batch_vectors, batch_ids):
-                points.append(PointStruct(
-                    id=point_id,
-                    vector=vector,
-                    payload=None
-                ))
-            
-            # Upload batch (gRPC handles this efficiently)
-            qdrant_client.client.upsert(
-                collection_name=collection_name,
-                points=points
-            )
-            
-            pbar.update(len(batch_vectors))
+            try:
+                # Load ONLY this batch from disk (memory efficient)
+                batch_count = end_idx - start_idx
+                batch_vectors = index.reconstruct_n(start_idx, batch_count)
+                
+                # Convert numpy array to list
+                if isinstance(batch_vectors, np.ndarray):
+                    batch_vectors = batch_vectors.tolist()
+                
+                # Create points for this batch
+                points = [
+                    PointStruct(
+                        id=start_idx + i,
+                        vector=vector,
+                        payload=None
+                    )
+                    for i, vector in enumerate(batch_vectors)
+                ]
+                
+                # Upload batch
+                qdrant_client.client.upsert(
+                    collection_name=collection_name,
+                    points=points
+                )
+                
+                # Clear batch from memory
+                del batch_vectors
+                del points
+                
+                pbar.update(batch_count)
+                
+                # Log progress every 100 batches
+                if (batch_idx + 1) % 100 == 0:
+                    elapsed = time.time() - start_time
+                    vectors_done = end_idx
+                    speed = vectors_done / elapsed if elapsed > 0 else 0
+                    logger.info(f"📊 Progress: {vectors_done}/{num_vectors} vectors ({speed:.1f} vec/s)")
+                    
+            except Exception as e:
+                logger.error(f"❌ Failed to process batch {batch_idx} (vectors {start_idx}-{end_idx}): {e}")
+                raise
     
     elapsed_time = time.time() - start_time
     logger.info(f"✅ Completed {collection_name}: {num_vectors} vectors in {elapsed_time:.2f}s ({num_vectors/elapsed_time:.1f} vectors/s)")
@@ -198,9 +220,9 @@ def main():
     if qdrant_client is None:
         raise RuntimeError("Failed to initialize Qdrant client")
     
-    # Get batch size from settings
-    batch_size = settings.QDRANT_BATCH_SIZE
-    logger.info(f"⚙️  Using batch size: {batch_size} (increase for faster upload)")
+    # Get batch size from settings - use smaller batch for large files
+    batch_size = 50  # Reduced to avoid OOM with large files like IC.bin (11GB)
+    logger.info(f"⚙️  Using batch size: {batch_size} (optimized for large files)")
     
     # Get vector size from settings or use default
     # You may need to configure this per collection or detect from first file

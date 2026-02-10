@@ -6,18 +6,35 @@ import numpy as np
 from typing import List, Union
 import logging
 from app.core.config import settings
+from app.services.gemini.url_manager import URLManager
 
 logger = logging.getLogger(__name__)
 
 
 class QwenClient:
     def __init__(self, base_url: str = None):
-        self.base_url = base_url or settings.EMBEDDING_SERVER_QWEN
-        if not self.base_url:
-            raise ValueError("EMBEDDING_SERVER_QWEN must be set in environment variables")
-
-        self.base_url = self.base_url.rstrip("/")
-        self.timeout = 60  
+        if base_url:
+            self.base_url = base_url.rstrip("/")
+            self.url_manager = None
+        else:
+            if not settings.EMBEDDING_SERVER_QWEN:
+                raise ValueError("EMBEDDING_SERVER_QWEN must be set in environment variables")
+            
+            # Use URL manager for load balancing
+            self.url_manager = URLManager(settings.EMBEDDING_SERVER_QWEN)
+            self.base_url = None  # Will be set per request
+        
+        self.timeout = 60
+    
+    def _get_base_url(self) -> str:
+        """Get base URL with load balancing"""
+        if self.base_url:
+            return self.base_url
+        if self.url_manager:
+            url = self.url_manager.get_next_url()
+            logger.debug(f"[QWEN] Using server: {url}")
+            return url.rstrip("/")
+        raise ValueError("No base URL available")  
 
     def extract_text_embedding(
         self,
@@ -33,7 +50,8 @@ class QwenClient:
 
         for text in texts:
             try:
-                url = f"{self.base_url}/embedding/qwen/text"
+                base_url = self._get_base_url()
+                url = f"{base_url}/embedding/qwen/text"
                 data = {"text": text}
 
                 response = requests.post(url, json=data, timeout=self.timeout)

@@ -3,6 +3,7 @@ import numpy as np
 from typing import List, Union
 import logging
 from app.core.config import settings
+from app.services.gemini.url_manager import URLManager
 
 logger = logging.getLogger(__name__)
 
@@ -10,28 +11,93 @@ logger = logging.getLogger(__name__)
 class BEiT3Client:
     
     def __init__(self, base_url: str = None):
-        self.base_url = base_url or settings.EMBEDDING_SERVER_MULTIMODAL
-        if not self.base_url:
-            raise ValueError("EMBEDDING_SERVER_MULTIMODAL must be set in environment variables")
-        self.base_url = self.base_url.rstrip("/")
+        if base_url:
+            self.base_url = base_url.rstrip("/")
+            self.url_manager = None
+        else:
+            if not settings.EMBEDDING_SERVER_MULTIMODAL:
+                raise ValueError("EMBEDDING_SERVER_MULTIMODAL must be set in environment variables")
+            
+            # Use URL manager for load balancing
+            self.url_manager = URLManager(settings.EMBEDDING_SERVER_MULTIMODAL)
+            self.base_url = None  # Will be set per request
+        
         self.timeout = 60
+        self._batch_available = None  # Cache batch endpoint availability
+    
+    def _get_base_url(self) -> str:
+        """Get base URL with load balancing"""
+        if self.base_url:
+            return self.base_url
+        if self.url_manager:
+            url = self.url_manager.get_next_url()
+            logger.debug(f"[BEiT3] Using server: {url}")
+            return url.rstrip("/")
+        raise ValueError("No base URL available")
     
     def extract_text_embedding(
         self,
         texts: Union[str, List[str]]
     ) -> np.ndarray:
-
+        """
+        Extract text embeddings from BEiT3 model.
+        Optimized: sends all texts in one batch request if server supports it.
+        """
         if isinstance(texts, str):
             texts = [texts]
 
         if not texts:
             return np.array([])
 
-        embeddings = []
+        # Try batch endpoint first (only if not already checked)
+        if self._batch_available is None:
+            try:
+                base_url = self._get_base_url()
+                url = f"{base_url}/embedding/beit3/text/batch"
+                payload = {"texts": texts}
+                response = requests.post(url, json=payload, timeout=self.timeout)
+                
+                if response.status_code == 200:
+                    self._batch_available = True
+                    result = response.json()
+                    embeddings = [np.array(emb, dtype=np.float32) for emb in result["embeddings"]]
+                    logger.info(f"[BEiT3] Batch endpoint available, processed {len(texts)} texts")
+                    return np.vstack(embeddings) if embeddings else np.array([])
+                else:
+                    self._batch_available = False
+                    logger.info(f"[BEiT3] Batch endpoint not available (status {response.status_code}), using individual calls")
+            except requests.exceptions.HTTPError as e:
+                if "404" in str(e):
+                    self._batch_available = False
+                    logger.info(f"[BEiT3] Batch endpoint not supported by server, using individual calls")
+                else:
+                    self._batch_available = False
+                    logger.warning(f"[BEiT3] Batch endpoint error: {e}, using individual calls")
+            except Exception as e:
+                self._batch_available = False
+                logger.info(f"[BEiT3] Batch endpoint unavailable: {e}, using individual calls")
+        
+        # Use batch endpoint if available
+        elif self._batch_available:
+            try:
+                base_url = self._get_base_url()
+                url = f"{base_url}/embedding/beit3/text/batch"
+                payload = {"texts": texts}
+                response = requests.post(url, json=payload, timeout=self.timeout)
+                response.raise_for_status()
+                result = response.json()
+                embeddings = [np.array(emb, dtype=np.float32) for emb in result["embeddings"]]
+                return np.vstack(embeddings) if embeddings else np.array([])
+            except Exception as e:
+                logger.warning(f"[BEiT3] Batch request failed: {e}, falling back to individual calls")
+                self._batch_available = False
 
+        # Fallback: individual requests
+        embeddings = []
         for text in texts:
             try:
-                url = f"{self.base_url}/embedding/beit3/text"
+                base_url = self._get_base_url()
+                url = f"{base_url}/embedding/beit3/text"
                 payload = {"text": text}
 
                 response = requests.post(url, json=payload, timeout=self.timeout)

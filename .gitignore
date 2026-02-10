@@ -1,60 +1,81 @@
+# Environment variables - NEVER commit these!
+.env
+*.env
+!.env.example
+!env.example
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
-.build/
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
 .eggs/
-.python-version
-.venv/
-venv/
-env/
-ENV/
-.venv*/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.ipynb_checkpoints/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
 *.egg-info/
-.dist-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Node / Frontend
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+.DS_Store
+
+# Logs
+*.log
+logs/
+backend/logs/*.log
+
+# Database
+*.db
+*.sqlite3
+*.sql
+
+# Data directories
+backend/app/data/keyframe/
+backend/app/data/index/bin/
+backend/app/data/index/es_data/
+
+# Docker
+.dockerignore
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Temporary files
+*.tmp
+*.temp
+
+# Node modules (frontend)
 node_modules/
-.next/
-.nuxt/
-.turbo/
-.pnpm-store/
-.yarn/
-.parcel-cache/
-.vite/
-coverage/
+
+# Build outputs
 dist/
 build/
-
-# Environment & secrets
-.env
-.env.*
-!*.env.example
-*.env
-*.env.*
-!*.env.example
-
-# OS / Editor / Misc
-.DS_Store
-.idea/
-.vscode/
-*.log
-
-# Logs (ignore log files but keep logs directory)
-logs/*.log
-logs/*.log.*
-!logs/.gitkeep
-backend/logs/*.log
-backend/logs/*.log.*
-!backend/logs/.gitkeep
-
-# Docker / Compose
-**/docker/volumes/
-**/tmp/
-
-# Keep uv.lock tracked (do NOT ignore)
-!uv.lock
+*.pyc

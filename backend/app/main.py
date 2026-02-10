@@ -18,6 +18,16 @@ async def lifespan(app: FastAPI):
     app_logger.info("🚀 Starting FastAPI application...")
     app_logger.info(f"Log directory: logs/")
     app_logger.info(f"Search queries log: logs/search_queries.log")
+    
+    # Initialize chatbox database
+    if settings.CHATBOX_ENABLED:
+        try:
+            from app.database.db import init_database
+            init_database()
+        except Exception as e:
+            app_logger.error(f"❌ Failed to initialize chatbox database: {e}")
+            # Continue startup even if database init fails (optional feature)
+    
     yield
     # Shutdown
     app_logger.info("🛑 Shutting down FastAPI application...")
@@ -59,8 +69,15 @@ async def health_check():
     }
 
 
-from app.routers import search
-app.include_router(search.router, prefix="/api", tags=["search"])
+from app.routers import search, search_augmented, search_multistage, search_image, chatbox
+app.include_router(search.router, prefix="/api", tags=["utils"])
+app.include_router(search_augmented.router, prefix="/api/augmented", tags=["search-augmented"])
+app.include_router(search_multistage.router, prefix="/api", tags=["multistage"])
+app.include_router(search_image.router, prefix="/api", tags=["image-search"])
+
+# Chatbox router (only if enabled)
+if settings.CHATBOX_ENABLED:
+    app.include_router(chatbox.router, prefix="/api/chatbox", tags=["chatbox"])
 
 
 keyframe_dir = settings.KEYFRAME_DIR
@@ -69,8 +86,8 @@ if not os.path.isabs(keyframe_dir):
     keyframe_dir = os.path.join(app_dir, keyframe_dir)
 
 if os.path.exists(keyframe_dir):
-    app.mount("/keyframes", StaticFiles(directory=keyframe_dir), name="keyframes")
-    app_logger.info(f"Mounted keyframe directory at /keyframes: {keyframe_dir}")
+    app.mount("/keyframe", StaticFiles(directory=keyframe_dir), name="keyframe")
+    app_logger.info(f"Mounted keyframe directory at /keyframe: {keyframe_dir}")
 else:
     app_logger.warning(f"Keyframe directory not found: {keyframe_dir}")
 

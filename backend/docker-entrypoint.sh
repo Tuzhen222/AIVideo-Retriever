@@ -64,7 +64,13 @@ if [ -d "$BIN_DIR" ]; then
         if python -m app.services.vector_db.ingest; then
             echo "✅ Qdrant ingest completed successfully!"
         else
-            echo "⚠️  Qdrant ingest completed with warnings (collections may already exist)"
+            EXIT_CODE=$?
+            echo "❌ Qdrant ingest FAILED with exit code ${EXIT_CODE}"
+            echo "   This may be due to:"
+            echo "   - Out of memory (OOM) - increase Docker memory limit"
+            echo "   - Qdrant connection issues"
+            echo "   - Invalid .bin file format"
+            echo "   Check logs above for details."
         fi
     else
         echo "ℹ️  No .bin files found in ${BIN_DIR}"

@@ -39,7 +39,8 @@ class MultiModelSearch:
             except:
                 return None
 
-        with ThreadPoolExecutor(max_workers=3) as ex:
+        # Use more workers for concurrent embedding extraction
+        with ThreadPoolExecutor(max_workers=6) as ex:
             clip_f = ex.submit(wrap, self.clip_client.extract_text_embedding)
             beit3_f = ex.submit(wrap, self.beit3_client.extract_text_embedding)
             bigg_f = ex.submit(wrap, self.bigg_client.extract_text_embedding)
@@ -60,7 +61,8 @@ class MultiModelSearch:
 
         clip_emb, beit3_emb, bigg_emb = self._extract_embeddings(query)
 
-        with ThreadPoolExecutor(max_workers=3) as ex:
+        # Use more workers for concurrent vector searches
+        with ThreadPoolExecutor(max_workers=6) as ex:
             clip_f = ex.submit(self._search, clip_emb, self.clip_collection, top_k * 2)
             beit3_f = ex.submit(self._search, beit3_emb, self.beit3_collection, top_k * 2)
             bigg_f = ex.submit(self._search, bigg_emb, self.bigg_collection, top_k * 2)
@@ -106,16 +108,32 @@ class MultiModelSearch:
             top_k = settings.DEFAULT_TOP_K
 
         model = model.lower()
-        if model == "clip":
-            emb = self.clip_client.extract_text_embedding(query)[0]
-            col = self.clip_collection
-        elif model == "beit3":
-            emb = self.beit3_client.extract_text_embedding(query)[0]
-            col = self.beit3_collection
-        elif model == "bigg":
-            emb = self.bigg_client.extract_text_embedding(query)[0]
-            col = self.bigg_collection
-        else:
+        try:
+            if model == "clip":
+                emb_result = self.clip_client.extract_text_embedding(query)
+                if emb_result is None or emb_result.size == 0 or emb_result.shape[0] == 0:
+                    logger.warning(f"[MULTIMODEL] CLIP returned empty embedding for query: {query}")
+                    return []
+                emb = emb_result[0]
+                col = self.clip_collection
+            elif model == "beit3":
+                emb_result = self.beit3_client.extract_text_embedding(query)
+                if emb_result is None or emb_result.size == 0 or emb_result.shape[0] == 0:
+                    logger.warning(f"[MULTIMODEL] BEiT3 returned empty embedding for query: {query}")
+                    return []
+                emb = emb_result[0]
+                col = self.beit3_collection
+            elif model == "bigg":
+                emb_result = self.bigg_client.extract_text_embedding(query)
+                if emb_result is None or emb_result.size == 0 or emb_result.shape[0] == 0:
+                    logger.warning(f"[MULTIMODEL] BIGG returned empty embedding for query: {query}")
+                    return []
+                emb = emb_result[0]
+                col = self.bigg_collection
+            else:
+                return []
+        except Exception as e:
+            logger.error(f"[MULTIMODEL] Error extracting embedding for {model}: {e}")
             return []
 
         res = self.qdrant_client.search(col, emb, top_k)

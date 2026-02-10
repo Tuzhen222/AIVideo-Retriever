@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     curl \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv for faster dependency management
@@ -28,17 +29,20 @@ RUN uv pip install --system --no-cache \
     "requests>=2.31.0" \
     "Pillow>=10.0.0" \
     "elasticsearch>=8.0.0,<9.0.0" \
-    "cohere>=5.0.0" 
+    "cohere>=5.0.0" \
+    "deep-translator>=1.11.4" \
+    "google-generativeai>=0.3.0" \
+    "psycopg2-binary>=2.9.9" 
 
-# Copy application code
+# Copy application code (excluding data due to .dockerignore)
 COPY app/ ./app/
 
 # Copy .env file if exists (optional, will be overridden by docker-compose env_file)
 COPY .env* ./
 
-# Copy entrypoint script
+# Copy entrypoint script and fix line endings (CRLF to LF for Windows)
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
 # Expose port
 EXPOSE 8000
@@ -50,6 +54,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Use entrypoint script
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
-# Default command
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Default command with multiple workers for better concurrency
+# Workers = 2 * CPU cores + 1 is recommended, using 4 workers for production
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
 

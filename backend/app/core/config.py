@@ -34,15 +34,19 @@ class Settings(BaseSettings):
     INDEX_DIR: str = "app/data/index"
     MAPPING_KF_PATH: str = "app/data/index/mapping_kf.json"
     MAPPING_SCENE_PATH: str = "app/data/index/mapping_scene.json"
+    BASE_DIR: str = ""  # Will be set to backend root directory
+    
+    # Model Server URL (for CLIP/BEiT3/BiGG embeddings)
+    MODEL_SERVER_URL: str = "https://privative-startingly-justa.ngrok-free.dev/"
     
     # Search settings
     DEFAULT_TOP_K: int = 200
     
-    EMBEDDING_SERVER_QWEN: Optional[str] = None
+    EMBEDDING_SERVER_QWEN: Optional[List[str]] = None
     COHERE_API_KEYS: Optional[List[str]] = None
-    # Embedding Server URL (for remote embedding API)
-    EMBEDDING_SERVER_MULTIMODAL: Optional[str] = None
-    
+    # Embedding Server URLs (for remote embedding API) - can be comma-separated for load balancing
+    EMBEDDING_SERVER_MULTIMODAL: Optional[List[str]] = None
+    GEMINI_API_KEYS: Optional[List[str]] = "AIzaSyCz7cbiDs-pvTGXxDuwOJzUnuybyNU7AiE", "AIzaSyB1OtAS0xvRIMAhcTCk11i_aG6DKKjvxF4"
     # Elasticsearch settings (if used)
     ELASTICSEARCH_HOST: Optional[str] = None
     ELASTICSEARCH_PORT: int = 9200
@@ -71,6 +75,20 @@ class Settings(BaseSettings):
     # Logging
     LOG_DIR: str = "logs"  # Directory for log files
     
+    # Chatbox settings
+    CHATBOX_DB_PATH: str = "logs/chatbox.db"  # Store in logs directory (has write permission) - DEPRECATED: Use PostgreSQL instead
+    CHATBOX_ENABLED: bool = True
+    CHATBOX_MAX_LIMIT: int = 200  # Max limit for fetch
+    
+    # PostgreSQL settings
+    POSTGRES_HOST: str = "localhost"
+    POSTGRES_PORT: int = 5432
+    POSTGRES_DB: str = "aivideo_chatbox"
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_POOL_SIZE: int = 5
+    POSTGRES_MAX_OVERFLOW: int = 10
+    
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
@@ -85,12 +103,38 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [k.strip() for k in v.split(",") if k.strip()]
         return v
+    
+    @field_validator("GEMINI_API_KEYS", mode="before")
+    @classmethod
+    def parse_gemini_keys(cls, v):
+        if isinstance(v, str):
+            return [k.strip() for k in v.split(",") if k.strip()]
+        return v
+    
+    @field_validator("EMBEDDING_SERVER_MULTIMODAL", mode="before")
+    @classmethod
+    def parse_multimodal_urls(cls, v):
+        if isinstance(v, str):
+            return [url.strip() for url in v.split(",") if url.strip()]
+        return v
+    
+    @field_validator("EMBEDDING_SERVER_QWEN", mode="before")
+    @classmethod
+    def parse_qwen_urls(cls, v):
+        if isinstance(v, str):
+            return [url.strip() for url in v.split(",") if url.strip()]
+        return v
 
 
 @lru_cache()
 def get_settings() -> Settings:
     """Get cached settings instance"""
-    return Settings()
+    import os
+    s = Settings()
+    # Set BASE_DIR to backend root directory
+    if not s.BASE_DIR:
+        s.BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    return s
 
 
 settings = get_settings()

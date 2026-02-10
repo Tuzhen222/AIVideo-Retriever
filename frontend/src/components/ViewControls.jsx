@@ -24,40 +24,6 @@ function ViewControls({ viewMode, onViewModeChange }) {
       >
         {viewMode || 'E'}
       </button>
-
-      {/* Input Num */}
-      <div className="flex items-center gap-1">
-        <input
-          type="number"
-          value={numValue}
-          onChange={(e) => {
-            const value = e.target.value
-            // Chỉ cho phép số dương hoặc rỗng
-            if (value === '' || (parseInt(value) >= 0 && !isNaN(parseInt(value)))) {
-              setNumValue(value)
-            }
-          }}
-          placeholder="Num"
-          min="0"
-          className="w-16 px-2 py-0.5 rounded border border-gray-300 text-xs font-medium focus:outline-none focus:ring-1 focus:ring-white"
-          title="Number of Advanced Temporal Search"
-        />
-      </div>
-
-      {/* Toggle Switch */}
-      <button
-        onClick={() => setToggleState(!toggleState)}
-        className={`relative w-10 h-5 rounded-full transition-colors duration-200 ${
-          toggleState ? 'bg-blue-500' : 'bg-gray-300'
-        }`}
-        aria-label="Toggle"
-      >
-        <span
-          className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-md transform transition-transform duration-200 ${
-            toggleState ? 'translate-x-5' : 'translate-x-0'
-          }`}
-        />
-      </button>
     </div>
   )
 }

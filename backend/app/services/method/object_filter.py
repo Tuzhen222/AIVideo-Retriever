@@ -42,21 +42,38 @@ class ObjectFilterSearch:
             logger.info("Object filter disabled → return original IDs")
             return ids
 
-        selected_set = set(selected_objects)
-        final_ids = []
+        if not ids:
+            return ids
 
-        for rid in ids:
-            try:
-                doc = self.client.get(index=self.index_name, id=rid)
-                obj_list = doc["_source"].get("objects", [])
+        try:
+            # Use Elasticsearch query to filter server-side (much more scalable)
+            # This is faster than mget() + client-side filtering for large datasets
+            query = {
+                "bool": {
+                    "filter": [
+                        {"ids": {"values": ids}},  # Only search within result IDs
+                        *[{"term": {"objects": obj}} for obj in selected_objects]  # All objects must exist
+                    ]
+                }
+            }
 
-                obj_set = set(obj_list)
+            response = self.client.search(
+                index=self.index_name,
+                query=query,
+                _source=False,  # Don't fetch document content, just IDs
+                size=len(ids)   # Max results = input size
+            )
 
-                if selected_set.issubset(obj_set):
-                    final_ids.append(rid)
+            # Extract IDs from search hits
+            final_ids = [hit["_id"] for hit in response["hits"]["hits"]]
+            
+            logger.info(f"Object filter: {len(ids)} → {len(final_ids)} results")
+            return final_ids
 
-            except Exception as e:
-                logger.warning(f"[ObjectFilter] Failed to fetch ID {rid}: {e}")
+        except Exception as e:
+            logger.error(f"[ObjectFilter] Search query failed: {e}")
+            # Fallback to original IDs if error
+            return ids
 
         logger.info(
             f"[ObjectFilter] Before: {len(ids)} → After filter: {len(final_ids)} "
