@@ -2,43 +2,43 @@
 
 Frontend application built with React and Tailwind CSS.
 
-## Yêu cầu hệ thống
+## Requirements
 
-- Node.js (version 16 trở lên)
-- npm hoặc yarn
+- Node.js (version 16 or higher)
+- npm or yarn
 
-## Cài đặt
+## Installation
 
-Mở terminal và chạy các lệnh sau:
+Open a terminal and run the following commands:
 
 ```bash
-# Di chuyển vào thư mục frontend
+# Navigate to the frontend directory
 cd frontend
 
-# Cài đặt các dependencies
+# Install dependencies
 npm install
 ```
 
-Hoặc nếu dùng yarn:
+Or if using yarn:
 ```bash
 cd frontend
 yarn install
 ```
 
-## Chạy development server
+## Running the Development Server
 
-Sau khi cài đặt xong, chạy lệnh:
+After installation, run:
 
 ```bash
 npm run dev
 ```
 
-Hoặc:
+Or:
 ```bash
 yarn dev
 ```
 
-Khi server khởi động thành công, bạn sẽ thấy thông báo:
+Once the server starts successfully, you will see:
 ```
   VITE v5.x.x  ready in xxx ms
 
@@ -46,31 +46,30 @@ Khi server khởi động thành công, bạn sẽ thấy thông báo:
   ➜  Network: use --host to expose
 ```
 
-**Mở trình duyệt và truy cập:** `http://localhost:3000`
+**Open your browser and navigate to:** `http://localhost:3000`
 
-## Build cho production
+## Production Build
 
-Để build ứng dụng cho production:
+To build the application for production:
 
 ```bash
 npm run build
 ```
 
-Files đã build sẽ nằm trong thư mục `dist/`
+The built files will be located in the `dist/` directory.
 
-Để preview build production:
+To preview the production build:
 
 ```bash
 npm run preview
 ```
 
-## Cấu trúc
+## Project Structure
 
-- `src/App.jsx` - Component chính với layout 3 phần
-- `src/layouts/Header.jsx` - Header bar màu đỏ với stages và view buttons
-- `src/layouts/Sidebar.jsx` - Sidebar với query input và controls
-- `src/layouts/MainContent.jsx` - Main content area
-- `src/components/ClearButton.jsx` - Clear button component
-- `src/components/StageButtons.jsx` - Stage buttons component
-- `src/components/ViewControls.jsx` - View controls component (E/A/M mode, Num input, Toggle)
-
+- `src/App.jsx` — Main component with 3-panel layout
+- `src/layouts/Header.jsx` — Red header bar with stages and view buttons
+- `src/layouts/Sidebar.jsx` — Sidebar with query input and controls
+- `src/layouts/MainContent.jsx` — Main content area
+- `src/components/ClearButton.jsx` — Clear button component
+- `src/components/StageButtons.jsx` — Stage buttons component
+- `src/components/ViewControls.jsx` — View controls component (E/A/M mode, Num input, Toggle)
